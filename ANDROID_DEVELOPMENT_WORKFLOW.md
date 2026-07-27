@@ -4,9 +4,9 @@ This workflow uses an EAS cloud-built Android development client and Metro over 
 
 ## Application ID decision
 
-The current Android package name is `com.pebble.app`. It is a placeholder-style identifier and is present both in [app.json](app.json) and the generated `android/` project.
+Pebble's permanent Android package name and iOS bundle identifier are both `io.github.viktormajor.pebble`. They are configured in [app.json](app.json) and the generated `android/` project.
 
-Choose Pebble's permanent Android application ID now, before creating an installable development build that you intend to keep. It should be a reverse-domain ID you control, for example `com.yourdomain.pebble`. Changing it later makes Android treat the build as a different app: the existing app must be uninstalled and its local data is not retained. This workflow deliberately does not change the identifier until that decision is made.
+Changing either identifier later makes the operating system treat the build as a different app: the existing app must be uninstalled and its local data is not retained.
 
 ## One-time setup
 
@@ -22,7 +22,7 @@ Choose Pebble's permanent Android application ID now, before creating an install
 
 4. Enable installation from the browser or file manager that will open the APK on the phone. This is the Android "Install unknown apps" permission.
 
-5. Decide the permanent application ID above. If changing it, change the Expo `android.package` and regenerate/update the native Android project before the first build. Do not make that change solely for this workflow.
+5. The permanent identifiers above are already configured. If either changes in the future, update the Expo configuration and native Android project before building; installed Android builds will need to be replaced.
 
 ## Create the EAS Android development build
 

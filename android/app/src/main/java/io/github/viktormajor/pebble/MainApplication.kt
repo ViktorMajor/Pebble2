@@ -1,4 +1,4 @@
-package com.pebble.app
+package io.github.viktormajor.pebble
 
 import android.app.Application
 import android.content.res.Configuration

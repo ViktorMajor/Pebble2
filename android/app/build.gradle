@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.pebble.app'
+    namespace 'io.github.viktormajor.pebble'
     defaultConfig {
-        applicationId 'com.pebble.app'
+        applicationId 'io.github.viktormajor.pebble'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

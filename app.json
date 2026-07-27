@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "bundleIdentifier": "com.pebble.app",
+      "bundleIdentifier": "io.github.viktormajor.pebble",
       "supportsTablet": true
     },
     "android": {
@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.pebble.app"
+      "package": "io.github.viktormajor.pebble"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -45,6 +45,30 @@
           ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "ExpoWidgetsTarget",
+                  "bundleIdentifier": "io.github.viktormajor.pebble.ExpoWidgetsTarget",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.io.github.viktormajor.pebble"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "235f7282-1f1e-49e6-804b-57b076991115"
+      }
+    },
+    "owner": "papmajorviktor"
   }
 }

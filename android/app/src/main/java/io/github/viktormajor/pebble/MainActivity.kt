@@ -1,4 +1,4 @@
-package com.pebble.app
+package io.github.viktormajor.pebble
 
 import android.os.Build
 import android.os.Bundle
