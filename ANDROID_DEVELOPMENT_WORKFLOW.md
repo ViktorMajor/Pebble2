@@ -40,17 +40,22 @@ On the first run, EAS may prompt to create/link the Expo project. Accept it for 
 2. Download the APK and approve the Android install prompt.
 3. Open **Pebble** once. It is a development client and will wait for Metro until the next section.
 
-## Start local Supabase and create the phone environment
+## Normal portable phone workflow
 
-1. From the repository root, start the local stack:
+1. Connect the laptop and phone to the same normal Wi-Fi network.
+2. From the repository root, run:
 
    ```bash
-   supabase start
+   npm run dev:phone
    ```
 
-2. Find the computer's LAN IPv4 address from the active Wi-Fi/Ethernet adapter. Do not use a Docker address, `localhost`, or `127.0.0.1`.
+The launcher derives the IPv4 source address of the laptop's default route, exports `EXPO_PUBLIC_SUPABASE_URL` for Metro as `http://<current-lan-ip>:54321`, checks the local Supabase API over that LAN address, starts Supabase when it is not running, starts local Edge Functions when needed, and launches Expo in development-client LAN mode. It does not alter `.env`, reset the database, or print credentials.
 
-3. Get the local **anon** key from the output of `supabase status` (or `supabase status -o env`). Never use or place a service-role key in `.env`.
+Open Pebble on the phone and select or scan the development server shown by Metro. Changing Wi-Fi/LAN IP does **not** require a new EAS APK.
+
+## Initial local environment setup
+
+1. Get the local **anon** key from the output of `supabase status` (or `supabase status -o env`). Never use or place a service-role key in `.env`.
 
 4. Copy the template and replace the placeholders:
 
@@ -58,25 +63,21 @@ On the first run, EAS may prompt to create/link the Expo project. Accept it for 
    cp .env.example .env
    ```
 
-   The resulting `.env` must contain this shape, with your actual LAN IPv4 address and local anon key:
+   The resulting `.env` must contain this shape, with any placeholder LAN URL and the local anon key:
 
    ```dotenv
-   EXPO_PUBLIC_SUPABASE_URL=http://YOUR_COMPUTER_LAN_IP:54321
+   EXPO_PUBLIC_SUPABASE_URL=http://placeholder:54321
    EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_LOCAL_ANON_KEY
    EXPO_PUBLIC_EAS_PROJECT_ID=YOUR_EAS_PROJECT_ID
    ```
 
    `.env` is gitignored. `EXPO_PUBLIC_*` values are bundled into the development app, so only use the anon key there; do not put service-role, push, or other private keys in it.
 
-The local Supabase gateway is published on all interfaces at port `54321`, so the phone reaches it at `http://YOUR_COMPUTER_LAN_IP:54321`. The Android development manifest permits cleartext HTTP for debug/development builds. This is only appropriate for the trusted local LAN; production must use HTTPS.
+The launcher replaces the URL only in its own Expo process using the current default-route LAN address. The local Supabase gateway must be published on all interfaces at port `54321`; the launcher preflights this. The Android development manifest permits cleartext HTTP for debug/development builds. This is only appropriate for the trusted local LAN; production must use HTTPS.
 
 ## Start Metro and connect the installed build
 
-1. Start Metro in LAN development-client mode:
-
-   ```bash
-   npm run start:android:lan
-   ```
+1. Start Metro with `npm run dev:phone`.
 
 2. Keep that terminal open. Expo prints a development URL/QR code using the computer's LAN address.
 3. Open Pebble on the phone. If it does not automatically offer the local server, use the development-client launcher to scan the QR code or enter the printed `exp+pebble://...` URL.
@@ -84,6 +85,8 @@ The local Supabase gateway is published on all interfaces at port `54321`, so th
 
 ## What to repeat
 
-For ordinary TypeScript, JavaScript, styling, or UI changes: save the files and keep Metro running. Fast Refresh reloads the installed development client; no APK/EAS build is needed. Restart Metro after changing `.env`, because `EXPO_PUBLIC_*` values are read by the bundler.
+For ordinary TypeScript, JavaScript, styling, or UI changes: save the files and keep Metro running. Fast Refresh reloads the installed development client; no APK/EAS build is needed. Restart `npm run dev:phone` after changing Wi-Fi so Metro receives the newly derived URL.
+
+Some guest/public networks use client isolation even when both devices show the same Wi-Fi SSID. In that case Metro LAN and laptop-local Supabase cannot be reached from the phone. `npx expo start --dev-client --tunnel` can tunnel Metro, but Metro tunneling alone does **not** make the laptop-local Supabase API available to an isolated phone.
 
 Create and reinstall a new EAS development APK only after native dependency/config changes: adding or upgrading a library with native code, changing Expo config/plugins, Android permissions, the Android package name, native Android files, or the Expo SDK/native runtime. Then rerun the EAS build command and install its APK before returning to the Metro loop.
