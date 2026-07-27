@@ -30,6 +30,9 @@ Push notifications are opt-in and event-driven only. Pebble does not send inacti
 ## Planned Application Structure
 
 - `app/`: Expo Router routes and layouts.
+- `app/(auth)/`: unauthenticated authentication route group.
+- `app/(app)/`: authenticated Shore, pairing, and settings routes. The Shore remains the default destination; Settings is a secondary stack flow rather than a tab dashboard.
+- `src/i18n/`: persisted English/Hungarian translation resources and locale resolution.
 - `src/features/auth/`: minimal Supabase authentication UI and helpers.
 - `src/features/pairing/`: shore creation and invitation joining UI backed by RPCs.
 - `src/features/shore/`: send, touch, and pair-scoped realtime shore experience.
@@ -52,6 +55,10 @@ Shore pairing is controlled through Postgres RPCs:
 
 - `create_shore_with_invite()` creates a shore, inserts the creator as first member, stores only a token hash, and returns the raw invite once.
 - `join_shore_with_invite(text)` hashes the submitted token, rate-limits invalid attempts, validates expiry and single-use state, locks pair/invite state, checks capacity, inserts membership, and consumes the invite atomically.
+
+A user may belong to many closed shores but at most one active shore. The database membership trigger serializes create/join attempts for each user and rejects a second active membership; the client resolves its current shore from active shores only. Closed shores remain member-scoped historical spaces in Connection settings.
+
+Localization uses `expo-localization`, `i18n-js`, and a persisted AsyncStorage preference. System default resolves Hungarian only for Hungarian device locales and otherwise falls back to English; explicit English or Hungarian overrides it immediately.
 
 Pebble sending is controlled through `send_pebble(text)`. The client supplies only an idempotency request key. The database derives `sender_id` from `auth.uid()`, finds the authenticated user's active shore, rejects closed or ambiguous shore state, prevents direct sender spoofing, rejects rapid repeat sends, and stores only the pebble event fields.
 

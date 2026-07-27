@@ -18,8 +18,8 @@ test('shore closing is server-controlled and renders a static shore state', () =
   assert.match(lifecycleService, /rpc\('close_shore'/);
   assert.match(lifecycleMigration, /delete from public\.pair_invites/);
   assert.match(lifecycleMigration, /status = 'closed'/);
-  assert.match(lifecycleMigration, /This shore is closed/);
-  assert.match(shoreScreen, /This shore is closed\./);
+  assert.match(lifecycleMigration, /status = 'closed'/);
+  assert.match(shoreScreen, /t\('shore\.closed'\)/);
   assert.match(shoreScreen, /isClosed \? <Text/);
 });
 

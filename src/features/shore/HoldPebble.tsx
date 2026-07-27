@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useI18n } from '../../i18n';
 
 import { HOLD_DURATION_MS } from './shoreTypes';
 
@@ -9,6 +10,7 @@ type HoldPebbleProps = {
 };
 
 export function HoldPebble({ onSend }: HoldPebbleProps) {
+  const { t } = useI18n();
   const [isSending, setIsSending] = useState(false);
   const [holdProgress] = useState(() => new Animated.Value(0));
   const [departure] = useState(() => new Animated.Value(0));
@@ -139,7 +141,7 @@ export function HoldPebble({ onSend }: HoldPebbleProps) {
   return (
     <Pressable
       accessibilityHint="Hold for about one second. Release early to cancel."
-      accessibilityLabel="Send a pebble"
+      accessibilityLabel={t('shore.send')}
       accessibilityRole="button"
       disabled={isSending}
       onPressIn={beginHold}

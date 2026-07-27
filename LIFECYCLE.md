@@ -4,6 +4,8 @@
 
 Either current member can close an active shore without the other member's approval. Closing is permanent for the shore: no new pebbles, touches, invitations, or push deliveries can be created. Existing pebbles remain visible to current members as a static memory. A closed shore remains in the member's view; the MVP intentionally has no separate hide control, because removing a membership would also change historical access.
 
+A person may retain multiple closed shores over time, but may belong to at most one active shore. After closing, they may begin a new shore without deleting the old one; Connection settings provides access to their closed shores.
+
 ## Delete An Account
 
 Account deletion is explicit and requires confirmation in the app. The server closes every active shore belonging to the requester before deleting the account.

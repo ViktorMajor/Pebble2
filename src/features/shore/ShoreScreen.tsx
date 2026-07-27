@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 import { HoldPebble } from './HoldPebble';
 import { PebbleStone } from './PebbleStone';
@@ -12,8 +13,7 @@ import { createSendRequestKey, sendPebble } from './sendPebbleService';
 import { touchPebble } from './touchPebbleService';
 import { useShorePebbles } from './useShorePebbles';
 import { requestPebblePushDelivery } from '../notifications/pushTokenService';
-import { AccountDeletionButton } from '../lifecycle/AccountDeletionButton';
-import { closeShore } from '../lifecycle/lifecycleService';
+import { useI18n } from '../../i18n';
 
 type ShoreScreenProps = {
   currentUserId: string;
@@ -22,6 +22,7 @@ type ShoreScreenProps = {
 };
 
 export function ShoreScreen({ currentUserId, pairId, shoreStatus }: ShoreScreenProps) {
+  const { t } = useI18n();
   const isClosed = shoreStatus === 'closed';
   const environment = useShoreEnvironment();
   const { errorText: loadErrorText, foundationDensity, isLoading, pebbles, refresh } = useShorePebbles(pairId, currentUserId, isClosed);
@@ -37,7 +38,7 @@ export function ShoreScreen({ currentUserId, pairId, shoreStatus }: ShoreScreenP
       await refresh();
       void requestPebblePushDelivery(sentPebble.id).catch(() => undefined);
     } catch (error) {
-      setErrorText('Could not send pebble.');
+      setErrorText(t('shore.sendError'));
       throw error;
     }
   };
@@ -58,25 +59,10 @@ export function ShoreScreen({ currentUserId, pairId, shoreStatus }: ShoreScreenP
         await Haptics.selectionAsync();
       }
     } catch {
-      setErrorText('Could not touch pebble.');
+      setErrorText(t('shore.touchError'));
     } finally {
       setTouchingPebbleIds((current) => current.filter((pebbleId) => pebbleId !== id));
     }
-  };
-
-  const confirmClose = () => {
-    Alert.alert('Close this shore?', 'Pebbles will remain here, but no new pebbles or touches can be added.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Close shore',
-        style: 'destructive',
-        onPress: () => {
-          void closeShore(pairId)
-            .then(refresh)
-            .catch(() => setErrorText('Could not close shore.'));
-        },
-      },
-    ]);
   };
 
   return (
@@ -84,11 +70,12 @@ export function ShoreScreen({ currentUserId, pairId, shoreStatus }: ShoreScreenP
       <StatusBar style="dark" />
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: environment.title }]}>Pebble</Text>
-          <Text style={[styles.subtitle, { color: environment.subtitle }]}>A quiet shore.</Text>
+          <Text style={[styles.title, { color: environment.title }]}>{t('app.name')}</Text>
+          <Text style={[styles.subtitle, { color: environment.subtitle }]}>{t('shore.quiet')}</Text>
+          <Link accessibilityRole="button" href="/(app)/settings" style={[styles.settings, { color: environment.subtitle }]}>{t('app.settings')}</Link>
         </View>
 
-        <View style={[styles.shore, { backgroundColor: environment.shoreBackground }]} accessibilityLabel="Shared shore" accessible>
+        <View style={[styles.shore, { backgroundColor: environment.shoreBackground }]} accessibilityLabel={t('shore.shared')} accessible>
           <View style={[styles.horizon, { backgroundColor: environment.horizon }]} />
           <ShoreFoundation color={environment.foundation} density={foundationDensity} />
           <View style={[styles.waterline, { backgroundColor: environment.waterline }]} />
@@ -96,7 +83,7 @@ export function ShoreScreen({ currentUserId, pairId, shoreStatus }: ShoreScreenP
             {pebbles.map((pebble) => (
               <PebbleStone
                 key={pebble.id}
-                accessibilityLabel={pebble.origin === 'other' ? 'Incoming pebble' : 'Sent pebble'}
+                accessibilityLabel={pebble.origin === 'other' ? t('shore.incoming') : t('shore.sent')}
                 disabled={isClosed || pebble.origin !== 'other' || pebble.touched || touchingPebbleIds.includes(pebble.id)}
                 origin={pebble.origin}
                 size={pebble.origin === 'other' ? 76 : 68}
@@ -104,21 +91,15 @@ export function ShoreScreen({ currentUserId, pairId, shoreStatus }: ShoreScreenP
                 onPress={pebble.origin === 'other' ? () => void touchIncoming(pebble.id) : undefined}
               />
             ))}
-            {isLoading ? <ActivityIndicator accessibilityLabel="Loading shore" color="#4F6A5F" /> : null}
+            {isLoading ? <ActivityIndicator accessibilityLabel={t('shore.loading')} color="#4F6A5F" /> : null}
           </View>
         </View>
 
-        {isClosed ? <Text style={styles.closedNote}>This shore is closed.</Text> : <View style={styles.sender}><HoldPebble onSend={addSentPebble} /></View>}
+        {isClosed ? <Text style={styles.closedNote}>{t('shore.closed')}</Text> : <View style={styles.sender}><HoldPebble onSend={addSentPebble} /></View>}
 
         {errorText || loadErrorText ? (
-          <Text accessibilityLiveRegion="polite" style={styles.error}>{errorText ?? loadErrorText}</Text>
+          <Text accessibilityLiveRegion="polite" style={styles.error}>{errorText ?? (loadErrorText ? t('shore.loadError') : null)}</Text>
         ) : null}
-        {!isClosed ? (
-          <Pressable accessibilityRole="button" onPress={confirmClose} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>Close this shore</Text>
-          </Pressable>
-        ) : null}
-        <AccountDeletionButton />
       </View>
     </SafeAreaView>
   );
@@ -148,6 +129,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     lineHeight: 38,
   },
+  settings: { alignSelf: 'flex-start', marginTop: 6, minHeight: 34, fontSize: 14, fontWeight: '600' },
   shore: {
     flex: 1,
     justifyContent: 'center',

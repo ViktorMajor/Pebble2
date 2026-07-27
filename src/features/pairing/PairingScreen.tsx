@@ -1,19 +1,22 @@
-import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { ActivityIndicator, Pressable, SafeAreaView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { useI18n } from '../../i18n';
 
 import { createShoreWithInvite, joinShoreWithInvite, type ShoreInvite } from './pairingService';
 
 type PairingScreenProps = {
-  accountLifecycle: ReactNode;
   onPaired: () => void;
 };
 
-export function PairingScreen({ accountLifecycle, onPaired }: PairingScreenProps) {
+export function PairingScreen({ onPaired }: PairingScreenProps) {
+  const { t } = useI18n();
   const [inviteToken, setInviteToken] = useState('');
   const [createdInvite, setCreatedInvite] = useState<ShoreInvite | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const createShore = async () => {
     setIsPending(true);
@@ -22,7 +25,7 @@ export function PairingScreen({ accountLifecycle, onPaired }: PairingScreenProps
     try {
       setCreatedInvite(await createShoreWithInvite());
     } catch {
-      setErrorText('Could not create shore.');
+      setErrorText(t('pairing.createError'));
     } finally {
       setIsPending(false);
     }
@@ -40,7 +43,7 @@ export function PairingScreen({ accountLifecycle, onPaired }: PairingScreenProps
       await joinShoreWithInvite(inviteToken);
       onPaired();
     } catch {
-      setErrorText('Could not join shore.');
+      setErrorText(t('pairing.joinError'));
     } finally {
       setIsPending(false);
     }
@@ -50,19 +53,19 @@ export function PairingScreen({ accountLifecycle, onPaired }: PairingScreenProps
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Pebble</Text>
-          <Text style={styles.subtitle}>Begin with one private shore.</Text>
+          <Text style={styles.title}>{t('app.name')}</Text>
+          <Text style={styles.subtitle}>{t('pairing.begin')}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Create a shore</Text>
+          <Text style={styles.sectionTitle}>{t('pairing.create')}</Text>
           <Pressable
             accessibilityRole="button"
             disabled={isPending}
             onPress={createShore}
             style={[styles.primaryButton, isPending && styles.disabled]}
           >
-            {isPending ? <ActivityIndicator color="#F7F3EC" /> : <Text style={styles.primaryText}>Create a shore</Text>}
+            {isPending ? <ActivityIndicator color="#F7F3EC" /> : <Text style={styles.primaryText}>{t('pairing.create')}</Text>}
           </Pressable>
 
           {createdInvite ? (
@@ -70,18 +73,22 @@ export function PairingScreen({ accountLifecycle, onPaired }: PairingScreenProps
               <Text selectable style={styles.inviteToken}>
                 {createdInvite.inviteToken}
               </Text>
-              <Text style={styles.helper}>Share this invitation once.</Text>
+              <Text style={styles.helper}>{t('pairing.shareOnce')}</Text>
+              <View style={styles.inviteActions}>
+                <Pressable accessibilityRole="button" onPress={() => void Clipboard.setStringAsync(createdInvite.inviteToken).then(() => setCopied(true))}><Text style={styles.link}>{copied ? t('pairing.copied') : t('pairing.copy')}</Text></Pressable>
+                <Pressable accessibilityRole="button" onPress={() => void Share.share({ message: createdInvite.inviteToken })}><Text style={styles.link}>{t('pairing.share')}</Text></Pressable>
+              </View>
             </View>
           ) : null}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Join a shore</Text>
+          <Text style={styles.sectionTitle}>{t('pairing.join')}</Text>
           <TextInput
-            accessibilityLabel="Invitation token"
+            accessibilityLabel={t('pairing.invitation')}
             autoCapitalize="none"
             onChangeText={setInviteToken}
-            placeholder="Invitation"
+            placeholder={t('pairing.invitation')}
             placeholderTextColor="#988C7E"
             style={styles.input}
             value={inviteToken}
@@ -92,12 +99,11 @@ export function PairingScreen({ accountLifecycle, onPaired }: PairingScreenProps
             onPress={joinShore}
             style={[styles.secondaryButton, (isPending || inviteToken.trim().length === 0) && styles.disabled]}
           >
-            <Text style={styles.secondaryText}>Join a shore</Text>
+            <Text style={styles.secondaryText}>{t('pairing.join')}</Text>
           </Pressable>
         </View>
 
         {errorText ? <Text accessibilityLiveRegion="polite" style={styles.error}>{errorText}</Text> : null}
-        {accountLifecycle}
       </View>
     </SafeAreaView>
   );
@@ -191,6 +197,8 @@ const styles = StyleSheet.create({
     color: '#776D62',
     fontSize: 13,
   },
+  inviteActions: { flexDirection: 'row', gap: 18 },
+  link: { color: '#4F6A5F', fontSize: 14, fontWeight: '600', minHeight: 32 },
   error: {
     color: '#8B3F35',
     fontSize: 13,

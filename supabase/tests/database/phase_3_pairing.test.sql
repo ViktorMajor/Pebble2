@@ -140,6 +140,14 @@ select results_eq(
 
 reset role;
 
+update public.pairs
+set status = 'closed', closed_at = now()
+where id in (
+  select pair_members.pair_id
+  from public.pair_members
+  where pair_members.user_id in ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000b2')
+);
+
 insert into public.pairs (id, status)
 values ('30000000-0000-4000-8000-000000000001', 'active');
 
@@ -167,6 +175,14 @@ select results_eq(
 );
 
 reset role;
+
+update public.pairs
+set status = 'closed', closed_at = now()
+where id in (
+  select pair_members.pair_id
+  from public.pair_members
+  where pair_members.user_id in ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000b2')
+);
 
 insert into public.pairs (id, status)
 values ('30000000-0000-4000-8000-000000000002', 'active');

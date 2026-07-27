@@ -55,8 +55,8 @@ export function useCurrentShore(isAuthenticated: boolean) {
         { event: 'UPDATE', schema: 'public', table: 'pairs', filter: `id=eq.${shore.id}` },
         (payload) => {
           const nextStatus = (payload.new as { status?: unknown }).status;
-          if (nextStatus === 'active' || nextStatus === 'closed') {
-            setShore((current) => (current ? { ...current, status: nextStatus } : current));
+          if (nextStatus === 'closed') {
+            setShore(null);
           }
         },
       )

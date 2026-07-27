@@ -4,21 +4,22 @@ import { test } from 'node:test';
 
 const supabaseClient = readFileSync(new URL('../src/lib/supabase.ts', import.meta.url), 'utf8');
 const appRoute = readFileSync(new URL('../app/index.tsx', import.meta.url), 'utf8');
+const shoreRoute = readFileSync(new URL('../app/(app)/shore.tsx', import.meta.url), 'utf8');
 const holdPebble = readFileSync(new URL('../src/features/shore/HoldPebble.tsx', import.meta.url), 'utf8');
 const sendService = readFileSync(new URL('../src/features/shore/sendPebbleService.ts', import.meta.url), 'utf8');
 const shoreScreen = readFileSync(new URL('../src/features/shore/ShoreScreen.tsx', import.meta.url), 'utf8');
 const authService = readFileSync(new URL('../src/features/auth/authService.ts', import.meta.url), 'utf8');
 
-test('sessions persist securely and recovery states do not fall through to pairing', () => {
+test('sessions persist securely and root routing selects an authenticated route group', () => {
   assert.match(supabaseClient, /@react-native-async-storage\/async-storage/);
   assert.match(supabaseClient, /persistSession: true/);
   assert.match(supabaseClient, /storage: AsyncStorage/);
-  assert.match(appRoute, /if \(shore\.errorText\)/);
-  assert.match(appRoute, /Try again/);
+  assert.match(appRoute, /Redirect href="\/\(auth\)"/);
+  assert.match(appRoute, /shore\.pairId \? '\/\(app\)\/shore' : '\/\(app\)\/pairing'/);
 });
 
-test('release flows avoid premature push registration and duplicate send gestures', () => {
-  assert.match(appRoute, /session && shore\.pairId \? session\.user\.id : null/);
+test('release flows keep authenticated routing and duplicate-send safeguards', () => {
+  assert.match(shoreRoute, /useCurrentShore/);
   assert.match(holdPebble, /const sending = useRef\(false\)/);
   assert.match(holdPebble, /disabled=\{isSending\}/);
   assert.match(shoreScreen, /requestPebblePushDelivery\(sentPebble\.id\)\.catch/);

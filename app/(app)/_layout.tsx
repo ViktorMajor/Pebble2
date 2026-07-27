@@ -1,0 +1,6 @@
+import { Redirect, Stack } from 'expo-router';
+import { ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
+import { useAuthSession } from '../../src/features/auth/useAuthSession';
+import { useI18n } from '../../src/i18n';
+export default function AppLayout() { const { session, isLoading } = useAuthSession(); const { t } = useI18n(); if (isLoading) return <SafeAreaView style={styles.loading}><ActivityIndicator /></SafeAreaView>; if (!session) return <Redirect href="/(auth)" />; return <Stack screenOptions={{ headerBackTitle: '', headerTintColor: '#4F6A5F', headerStyle: { backgroundColor: '#F7F3EC' }, contentStyle: { backgroundColor: '#F7F3EC' } }}><Stack.Screen name="shore" options={{ headerShown: false }} /><Stack.Screen name="pairing" options={{ headerShown: false }} /><Stack.Screen name="settings/index" options={{ title: t('settings.title') }} /><Stack.Screen name="settings/profile" options={{ title: t('settings.profile') }} /><Stack.Screen name="settings/language" options={{ title: t('language.title') }} /><Stack.Screen name="settings/connection" options={{ title: t('settings.connection') }} /><Stack.Screen name="settings/account" options={{ title: t('settings.account') }} /></Stack>; }
+const styles = StyleSheet.create({ loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F3EC' } });

@@ -3,10 +3,12 @@ import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, TextInput
 
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { signInWithEmail, signUpWithProfile } from './authService';
+import { useI18n } from '../../i18n';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
 export function AuthScreen() {
+  const { t } = useI18n();
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,7 +39,7 @@ export function AuthScreen() {
         await signInWithEmail({ email, password });
       }
     } catch {
-      setErrorText(isSignUp ? 'Could not create profile.' : 'Could not sign in.');
+      setErrorText(isSignUp ? t('auth.createError') : t('auth.signInError'));
     } finally {
       setIsPending(false);
     }
@@ -47,18 +49,18 @@ export function AuthScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Pebble</Text>
-          <Text style={styles.subtitle}>Sign in to your private shore.</Text>
+          <Text style={styles.title}>{t('app.name')}</Text>
+          <Text style={styles.subtitle}>{t('auth.access')}</Text>
         </View>
 
         <View style={styles.form}>
           {isSignUp ? (
             <TextInput
-              accessibilityLabel="Display name"
+              accessibilityLabel={t('auth.displayName')}
               autoCapitalize="words"
               maxLength={80}
               onChangeText={setDisplayName}
-              placeholder="Display name"
+              placeholder={t('auth.displayName')}
               placeholderTextColor="#988C7E"
               style={styles.input}
               value={displayName}
@@ -66,23 +68,23 @@ export function AuthScreen() {
           ) : null}
 
           <TextInput
-            accessibilityLabel="Email"
+            accessibilityLabel={t('auth.email')}
             autoCapitalize="none"
             autoComplete="email"
             inputMode="email"
             onChangeText={setEmail}
-            placeholder="Email"
+            placeholder={t('auth.email')}
             placeholderTextColor="#988C7E"
             style={styles.input}
             value={email}
           />
 
           <TextInput
-            accessibilityLabel="Password"
+            accessibilityLabel={t('auth.password')}
             autoCapitalize="none"
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             onChangeText={setPassword}
-            placeholder="Password"
+            placeholder={t('auth.password')}
             placeholderTextColor="#988C7E"
             secureTextEntry
             style={styles.input}
@@ -91,7 +93,7 @@ export function AuthScreen() {
 
           {errorText ? <Text accessibilityLiveRegion="polite" style={styles.error}>{errorText}</Text> : null}
           {!isSupabaseConfigured ? (
-            <Text accessibilityLiveRegion="polite" style={styles.error}>Pebble is not configured on this device.</Text>
+            <Text accessibilityLiveRegion="polite" style={styles.error}>{t('app.notConfigured')}</Text>
           ) : null}
 
           <Pressable
@@ -103,7 +105,7 @@ export function AuthScreen() {
             {isPending ? (
               <ActivityIndicator color="#F7F3EC" />
             ) : (
-              <Text style={styles.primaryButtonText}>{isSignUp ? 'Create profile' : 'Sign in'}</Text>
+              <Text style={styles.primaryButtonText}>{isSignUp ? t('auth.createAccount') : t('auth.signIn')}</Text>
             )}
           </Pressable>
 
@@ -115,7 +117,7 @@ export function AuthScreen() {
             }}
             style={styles.secondaryButton}
           >
-            <Text style={styles.secondaryButtonText}>{isSignUp ? 'I already have access' : 'Create profile'}</Text>
+            <Text style={styles.secondaryButtonText}>{isSignUp ? t('auth.existingAccount') : t('auth.createProfile')}</Text>
           </Pressable>
         </View>
       </View>
