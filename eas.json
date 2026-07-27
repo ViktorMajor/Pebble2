@@ -1,0 +1,12 @@
+{
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "prebuildCommand": "expo prebuild --clean",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}

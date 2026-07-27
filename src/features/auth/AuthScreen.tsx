@@ -1,0 +1,193 @@
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { signInWithEmail, signUpWithProfile } from './authService';
+
+type AuthMode = 'sign-in' | 'sign-up';
+
+export function AuthScreen() {
+  const [mode, setMode] = useState<AuthMode>('sign-in');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
+
+  const isSignUp = mode === 'sign-up';
+  const canSubmit =
+    isSupabaseConfigured &&
+    email.trim().length > 0 &&
+    password.length >= 6 &&
+    (!isSignUp || displayName.trim().length > 0) &&
+    !isPending;
+
+  const submit = async () => {
+    if (!canSubmit) {
+      return;
+    }
+
+    setIsPending(true);
+    setErrorText(null);
+
+    try {
+      if (isSignUp) {
+        await signUpWithProfile({ displayName, email, password });
+      } else {
+        await signInWithEmail({ email, password });
+      }
+    } catch {
+      setErrorText(isSignUp ? 'Could not create profile.' : 'Could not sign in.');
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Pebble</Text>
+          <Text style={styles.subtitle}>Sign in to your private shore.</Text>
+        </View>
+
+        <View style={styles.form}>
+          {isSignUp ? (
+            <TextInput
+              accessibilityLabel="Display name"
+              autoCapitalize="words"
+              maxLength={80}
+              onChangeText={setDisplayName}
+              placeholder="Display name"
+              placeholderTextColor="#988C7E"
+              style={styles.input}
+              value={displayName}
+            />
+          ) : null}
+
+          <TextInput
+            accessibilityLabel="Email"
+            autoCapitalize="none"
+            autoComplete="email"
+            inputMode="email"
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor="#988C7E"
+            style={styles.input}
+            value={email}
+          />
+
+          <TextInput
+            accessibilityLabel="Password"
+            autoCapitalize="none"
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor="#988C7E"
+            secureTextEntry
+            style={styles.input}
+            value={password}
+          />
+
+          {errorText ? <Text accessibilityLiveRegion="polite" style={styles.error}>{errorText}</Text> : null}
+          {!isSupabaseConfigured ? (
+            <Text accessibilityLiveRegion="polite" style={styles.error}>Pebble is not configured on this device.</Text>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={!canSubmit}
+            onPress={submit}
+            style={[styles.primaryButton, !canSubmit && styles.disabledButton]}
+          >
+            {isPending ? (
+              <ActivityIndicator color="#F7F3EC" />
+            ) : (
+              <Text style={styles.primaryButtonText}>{isSignUp ? 'Create profile' : 'Sign in'}</Text>
+            )}
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setErrorText(null);
+              setMode(isSignUp ? 'sign-in' : 'sign-up');
+            }}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>{isSignUp ? 'I already have access' : 'Create profile'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7F3EC',
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 36,
+    paddingHorizontal: 28,
+  },
+  header: {
+    gap: 8,
+  },
+  title: {
+    color: '#403931',
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  subtitle: {
+    color: '#675D52',
+    fontSize: 26,
+    lineHeight: 34,
+  },
+  form: {
+    gap: 14,
+  },
+  input: {
+    minHeight: 54,
+    borderWidth: 1,
+    borderColor: '#D4C8B9',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    color: '#403931',
+    backgroundColor: '#FBF8F2',
+    fontSize: 16,
+  },
+  error: {
+    color: '#8B3F35',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  primaryButton: {
+    minHeight: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 27,
+    backgroundColor: '#4F6A5F',
+  },
+  disabledButton: {
+    opacity: 0.45,
+  },
+  primaryButtonText: {
+    color: '#F7F3EC',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: '#675D52',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
