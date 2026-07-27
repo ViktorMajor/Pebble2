@@ -91,6 +91,7 @@ export function ShoreScreen({ currentUserId, pairId, shoreStatus }: ShoreScreenP
                 onPress={pebble.origin === 'other' ? () => void touchIncoming(pebble.id) : undefined}
               />
             ))}
+            {!isLoading && pebbles.length === 0 ? <Text style={[styles.empty, { color: environment.subtitle }]}>{t('shore.empty')}</Text> : null}
             {isLoading ? <ActivityIndicator accessibilityLabel={t('shore.loading')} color="#4F6A5F" /> : null}
           </View>
         </View>
@@ -177,6 +178,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingBottom: 20,
   },
+  empty: { fontSize: 15, textAlign: 'center', paddingHorizontal: 28 },
   closeButton: {
     alignSelf: 'center',
     minHeight: 44,

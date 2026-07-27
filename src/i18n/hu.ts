@@ -1,9 +1,10 @@
 export const hu = {
-  app: { name: 'Pebble', loading: 'A Pebble betöltése', retry: 'Próbáld újra', settings: 'Beállítások', notConfigured: 'A Pebble nincs beállítva ezen az eszközön.' },
+  app: { name: 'Pebble', loading: 'A Pebble betöltése', retry: 'Próbáld újra', settings: 'Beállítások', notConfigured: 'A Pebble nincs beállítva ezen az eszközön.', continue: 'Tovább', skip: 'Kihagyás' },
+  onboarding: { first: 'Küldj egy kavicsot, amikor eszedbe jut valaki.', second: 'Egy érkező kavics megérintése csak azt jelenti, hogy megérkezett.', third: 'Egy kavics nem igényel választ. A csendnek is van helye.' },
   auth: {
     signIn: 'Belépés', createProfile: 'Profil létrehozása', access: 'Lépj be a privát partodhoz.',
     displayName: 'Megjelenő név', email: 'E-mail', password: 'Jelszó', createAccount: 'Profil létrehozása',
-    existingAccount: 'Már van hozzáférésem', createError: 'A profil létrehozása nem sikerült.', signInError: 'A belépés nem sikerült.',
+    existingAccount: 'Már van hozzáférésem', createError: 'A profil létrehozása nem sikerült.', signInError: 'A belépés nem sikerült.', emailHint: 'Adj meg érvényes e-mail-címet.', passwordHint: 'Legalább 6 karaktert használj.',
   },
   pairing: {
     begin: 'Kezdj egy privát parttal.', create: 'Part létrehozása', join: 'Csatlakozás egy parthoz', invitation: 'Meghívó',
@@ -12,7 +13,7 @@ export const hu = {
     activeShore: 'Már van aktív partod.', invalid: 'Ez a meghívó nem elérhető.', expired: 'Ez a meghívó lejárt.',
     used: 'Ezt a meghívót már felhasználták.', full: 'Ezen a parton már ketten vannak.', network: 'Nem sikerült kapcsolódni. Próbáld újra.',
   },
-  shore: { quiet: 'Csendes part.', shared: 'Közös part', incoming: 'Érkező kavics', sent: 'Elküldött kavics', send: 'Kavics küldése', loading: 'A part betöltése', closed: 'Ez a part lezárult.', sendError: 'A kavics elküldése nem sikerült.', touchError: 'A kavics érintése nem sikerült.', loadError: 'A part betöltése nem sikerült.' },
+  shore: { quiet: 'Csendes part.', empty: 'Ez a part készen áll egy kavicsra.', shared: 'Közös part', incoming: 'Érkező kavics', sent: 'Elküldött kavics', send: 'Kavics küldése', loading: 'A part betöltése', closed: 'Ez a part lezárult.', sendError: 'A kavics elküldése nem sikerült.', touchError: 'A kavics érintése nem sikerült.', loadError: 'A part betöltése nem sikerült.' },
   settings: {
     title: 'Beállítások', profile: 'Profil', language: 'Nyelv', connection: 'Kapcsolódás', notifications: 'Értesítések', account: 'Fiók',
     displayName: 'Megjelenő név', accountEmail: 'Fiók e-mail-címe', currentLanguage: 'Jelenlegi nyelv', systemDefault: 'Rendszer alapértelmezése',

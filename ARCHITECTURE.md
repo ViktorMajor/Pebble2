@@ -33,6 +33,7 @@ Push notifications are opt-in and event-driven only. Pebble does not send inacti
 - `app/(auth)/`: unauthenticated authentication route group.
 - `app/(app)/`: authenticated Shore, pairing, and settings routes. The Shore remains the default destination; Settings is a secondary stack flow rather than a tab dashboard.
 - `src/i18n/`: persisted English/Hungarian translation resources and locale resolution.
+- `src/features/onboarding/`: a locally persisted, skippable three-step first-use introduction. It establishes Pebble's non-demanding norm before authentication and stores no relationship behaviour.
 - `src/features/auth/`: minimal Supabase authentication UI and helpers.
 - `src/features/pairing/`: shore creation and invitation joining UI backed by RPCs.
 - `src/features/shore/`: send, touch, and pair-scoped realtime shore experience.

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { signInWithEmail, signUpWithProfile } from './authService';
@@ -19,7 +19,7 @@ export function AuthScreen() {
   const isSignUp = mode === 'sign-up';
   const canSubmit =
     isSupabaseConfigured &&
-    email.trim().length > 0 &&
+    /^\S+@\S+\.\S+$/.test(email.trim()) &&
     password.length >= 6 &&
     (!isSignUp || displayName.trim().length > 0) &&
     !isPending;
@@ -46,8 +46,7 @@ export function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.safeArea}><ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.title}>{t('app.name')}</Text>
           <Text style={styles.subtitle}>{t('auth.access')}</Text>
@@ -58,6 +57,8 @@ export function AuthScreen() {
             <TextInput
               accessibilityLabel={t('auth.displayName')}
               autoCapitalize="words"
+              autoComplete="name"
+              returnKeyType="next"
               maxLength={80}
               onChangeText={setDisplayName}
               placeholder={t('auth.displayName')}
@@ -72,6 +73,8 @@ export function AuthScreen() {
             autoCapitalize="none"
             autoComplete="email"
             inputMode="email"
+            keyboardType="email-address"
+            returnKeyType="next"
             onChangeText={setEmail}
             placeholder={t('auth.email')}
             placeholderTextColor="#988C7E"
@@ -87,6 +90,8 @@ export function AuthScreen() {
             placeholder={t('auth.password')}
             placeholderTextColor="#988C7E"
             secureTextEntry
+            returnKeyType="done"
+            onSubmitEditing={() => void submit()}
             style={styles.input}
             value={password}
           />
@@ -120,8 +125,7 @@ export function AuthScreen() {
             <Text style={styles.secondaryButtonText}>{isSignUp ? t('auth.existingAccount') : t('auth.createProfile')}</Text>
           </Pressable>
         </View>
-      </View>
-    </SafeAreaView>
+      </ScrollView></KeyboardAvoidingView></SafeAreaView>
   );
 }
 
@@ -131,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F3EC',
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     gap: 36,
     paddingHorizontal: 28,
