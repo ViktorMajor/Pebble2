@@ -33,7 +33,9 @@ Layouts zero through six are explicit. The initial three form a loose asymmetric
 
 ## Composition and camera
 
-The renderer measures its real Canvas viewport. A 40-degree vertical perspective camera sits at a 41-degree downward angle. Distance is derived from the 3.84-world-unit bowl diameter and current horizontal field of view, targeting 74% of safe width. The acceptable normal range is 70–78%, never above 80%, with at least 24 logical pixels on each side; the margin constraint wins on exceptionally small viewports.
+The renderer uses a measured full-size architecture: a `width: 100%`, stretching, relative parent validates finite non-zero `onLayout` dimensions before creating Expo GL. Canvas and fallback then receive the same explicit absolute bounds. Flex alone is insufficient because the Android native GL surface can retain an intrinsic partial width even while its React Native ancestors appear flexible.
+
+The former “74%” diagnostic was misleading because it described the bowl relative to that undersized GL surface, not the phone's intended scene area. Metrics now report parent, Canvas, window, Safe Area, and aspect dimensions together. The camera uses the validated Canvas viewport. A 40-degree vertical perspective camera sits at a 41-degree downward angle. Distance is derived from the 3.84-world-unit bowl diameter and current horizontal field of view, targeting 74% of safe width. The acceptable normal range is 70–78%, never above 80%, with at least 24 logical pixels on each side; the margin constraint wins on exceptionally small viewports.
 
 The camera looks slightly above the bowl so its visual centre settles near 56–60% of usable height. The entire outer contour and rim must remain inside the frustum, clear of relational text, the settings control, and the gesture area. Portrait recalculation, small Android screens, English/Hungarian copy, and font scaling must not clip the object.
 
@@ -65,6 +67,8 @@ Primary and secondary essential text exceed WCAG AA against the background edge;
 
 The empty bowl is complete, warm enough to read, and never a disabled state. The only default caption is “The bowl is empty.” / “A tál most üres.” in Relational Hero. It enters after a 340 ms settle delay over 420 ms, without blur, letter animation, icon, count, second line, CTA, or request for the partner to act.
 
+The sentence and bowl share one full-screen atmosphere: relational text is an overlay around 12% of usable height and never resizes the renderer. A complete connection with zero identities held by the caller is legitimately empty. A one-member connection has not yet provisioned its six identities and belongs in the invitation flow, while `legacy-six-migration-required` is a separate blocked diagnostic state. Pebble never fabricates stones to disguise any of these conditions.
+
 ## Neumorphism boundary
 
 Neumorphism belongs to the physical objects, never to the application chrome. Depth, volume, contact shadow, reflected light, lift, and surface relief may shape the bowl and stones. Buttons, fields, cards, settings, navigation, and general surfaces remain flat and restrained—never embossed, inset, clay-like, glassmorphic, or Bento-styled.
@@ -87,7 +91,13 @@ The earlier Pebble repository contributed procedural deformation, deterministic 
 
 The responsive 2D fallback uses the same six roles, zero-through-six layouts, 74% centred bowl, bright-dark palette, tactile shadows, hold/cancel/departure behavior, and empty-state hierarchy. It is a product surface, not an unrelated placeholder.
 
-The development-only Bowl Lab never accesses Supabase. It exposes counts zero through six, all identities, initial three, all six, empty, held/cancelled/departure/arrival/touched states, four times, seasons, maximum darkness, reduced motion, low-end quality, GL fallback, wireframe, unlit material, white light, bowl/pebble visibility, axes/camera diagnostics, Safe Area overlay, English/Hungarian, and large type. It reports projected width, side margin, bounds, camera distance, exposure, light intensities, frame activity, Canvas count, and active animation.
+The development-only Bowl Lab is opened from Settings → Development; no ADB command is required. A full-width preview uses about 42% of portrait height with a 300-point minimum. A separate scrolling workbench groups pebble count, motion, lighting/season, collapsible renderer diagnostics and metrics, typography/accessibility, and connection inspection. Metrics no longer cover the bowl.
+
+The Lab exposes counts zero through six, all identities, initial three, all six, empty, hold/cancel/departure/arrival/touched states, four times, seasons, maximum darkness, reduced motion, low-end quality, GL fallback, wireframe, unlit material, white light, bowl/pebble visibility, axes/camera diagnostics, Safe Area overlay, English/Hungarian, and large type. It reports real parent/Canvas/window bounds, Safe Area, projected width, side margin, camera distance, exposure, lights, frame activity, Canvas instances, renderer mounts, readiness, fallback, and active animation.
+
+The optional development data inspector calls a member-only aggregate RPC. It shows pair/model status and active, caller-held, elsewhere-held, and retired counts without partner identity. It cannot write ownership or bypass RLS, and production navigation cannot expose the Lab.
+
+The GL shader draws its atmosphere directly across clip space, the renderer clear color matches the environment edge, and React Native/fallback layers use the same environment values. Loading and GL readiness therefore remain one continuous bright-dark surface without a black video-frame boundary.
 
 ## Physical-device acceptance
 

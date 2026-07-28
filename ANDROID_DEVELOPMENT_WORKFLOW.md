@@ -53,6 +53,8 @@ The launcher derives the IPv4 source address of the laptop's default route, expo
 
 Open Pebble on the phone and select or scan the development server shown by Metro. Changing Wi-Fi/LAN IP does **not** require a new EAS APK.
 
+In development builds, Bowl Lab is available inside Pebble at **Settings → Development → Open Bowl Lab**. It does not require ADB. The floating gear, ellipsis, mute, or moon controls that Expo may draw over the app belong to Expo Dev Client, not Pebble. They can be disabled with Expo Dev Client's **Tools button** setting, and they are absent from production builds. Pebble layout should not compensate for those temporary external controls.
+
 ## Initial local environment setup
 
 1. Get the local **anon** key from the output of `supabase status` (or `supabase status -o env`). Never use or place a service-role key in `.env`.
@@ -102,3 +104,5 @@ npx eas-cli@latest build --platform android --profile development
 After that APK is installed, changing Wi-Fi, local Supabase data, TypeScript, bowl geometry, layouts, colors, light, animation, copy, or other JavaScript does not require another EAS build. Use the normal `npm run dev:phone` loop.
 
 The Bright Dark Bowl / six-pebble refinement adds no native dependency or native configuration. The installed Premium Bowl development APK can load it through Metro; the Three.js version alignment is JavaScript-only.
+
+The full-screen measured Bowl layout and structured Bowl Lab are also JavaScript/TypeScript changes. They use the native modules already present in that installed development APK, so no new EAS build is required.

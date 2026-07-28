@@ -10,7 +10,7 @@ Pebble is an Expo SDK 57 / React Native application using strict TypeScript, Exp
 - `app/(app)/pairing.tsx`: connection invitation/join ritual.
 - `app/(app)/settings/`: profile, language, connection history, notifications/sounds, and account administration.
 - `app/(app)/bowl/[id].tsx`: immutable past connection bowl.
-- `app/(app)/bowl-lab.tsx`: development-only visual harness; redirects outside `__DEV__` and never touches Supabase.
+- `app/(app)/bowl-lab.tsx`: development-only visual harness; redirects outside `__DEV__`. Its optional connection inspector reads one member-authorized aggregate RPC and never mutates Supabase or returns partner identity.
 - `src/features/bowl/`: finite held-state service, deterministic layouts, procedural geometry, native renderer, 2D fallback, environmental light, and interaction state.
 - `src/design/`: graphite/mineral design tokens and the Source Serif 4 / Source Sans 3 font loader.
 - `src/i18n/`: persisted English/Hungarian localization.
@@ -22,7 +22,7 @@ The Shore presentation and its bounded accumulated-history renderer were removed
 
 ## Session and navigation gate
 
-`AppSessionProvider` owns one Supabase session subscription and one active-connection lookup. No route redirects until both are resolved. Unauthenticated users reach Auth; authenticated users with an active connection reach Bowl; authenticated users without one reach Pairing. Every unresolved and recoverable failure state renders a full-screen loading or localized retry surface.
+`AppSessionProvider` owns one Supabase session subscription and one active-connection lookup. No route redirects until both are resolved. Unauthenticated users reach Auth; authenticated users with a complete active connection reach Bowl; authenticated users without a connection or with a one-member waiting connection reach Pairing. This prevents an unprovisioned invitation from masquerading as an empty bowl. Every unresolved and recoverable failure state renders a full-screen loading or localized retry surface.
 
 ## Connection domain
 
@@ -42,7 +42,9 @@ Each completed connection owns exactly `private.total_pair_pebbles()` active sta
 
 ## Native bowl presentation
 
-React Three Fiber's native canvas uses Expo GL—no WebView or DOM layer. One demand-driven renderer contains the bowl, all held pebbles, lights, and contact grounding. Pixel ratio is capped at 1.35, or 1 in the low-quality lab mode. Camera distance is calculated from the measured Canvas aspect ratio and bowl diameter to hold a 74% projected width with at least 24 logical pixels of side clearance. Geometry complexity is bounded, layouts for zero through six are fixed, and resources/timers are disposed on teardown. Active interaction explicitly invalidates frames; a resting scene stops requesting them. GL initialization/render errors fall back to a responsive 2D bowl with the same state and interaction semantics.
+React Three Fiber's native canvas uses Expo GL—no WebView or DOM layer. `BowlScene` first measures a full-width, stretching parent and ignores transient zero or invalid layout events. It creates the Canvas only after validated dimensions exist, then gives the GL surface and 2D fallback the same explicit absolute bounds. This avoids the Android Expo GL intrinsic-size surface that previously appeared as a small left-aligned rectangle. One demand-driven renderer contains the bowl, all held pebbles, lights, and contact grounding. Pixel ratio is capped at 1.35, or 1 in the low-quality lab mode. Camera distance is calculated from the validated Canvas aspect ratio and bowl diameter to hold a 74% projected width with at least 24 logical pixels of side clearance. Geometry complexity is bounded, layouts for zero through six are fixed, and resources/timers are disposed on teardown. Active interaction explicitly invalidates frames; a resting scene stops requesting them. GL initialization/render errors fall back to a responsive 2D bowl with the same bounds, state, atmosphere, and interaction semantics.
+
+The development diagnostics RPC returns only connection/model status, member count, active/held/elsewhere/retired aggregates, and the caller's pair ID after verifying membership. It exposes no partner identifier or profile data. Production UI never invokes it. A complete six-pebble connection with zero held rows is a legitimate empty bowl; a one-member connection is waiting and unprovisioned; `legacy-six-migration-required` remains a distinct blocked migration state.
 
 Procedural identities combine persisted seeds with a stable six-role `visual_variant` for guaranteed differentiation in flattening, proportions, dents, asymmetry, value, and material response. `getBowlEnvironment(date)` continuously interpolates local-time light and subtle calendar-season variation inside a readable bright-dark range, with no location, weather, network, or relationship input.
 
