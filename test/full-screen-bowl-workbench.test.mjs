@@ -29,7 +29,7 @@ test('BowlScene validates parent dimensions before creating an explicit full-siz
 test('camera framing and Bowl width metrics use the validated Canvas viewport', () => {
   assert.match(scene, /calculateBowlFraming\(size\.width, size\.height\)/);
   assert.match(scene, /parentWidth: viewport\.width/);
-  assert.match(scene, /canvasWidth: viewport\.width/);
+  assert.match(scene, /canvasWidth: canvasLayout\?\.width \?\? 0/);
   assert.match(scene, /viewportAspectRatio: viewport\.width \/ viewport\.height/);
   for (const [width, height] of [[320, 640], [360, 800], [393, 873], [412, 915], [800, 360]]) {
     const limited = Math.min(0.74, 0.78, (width - 48) / width);

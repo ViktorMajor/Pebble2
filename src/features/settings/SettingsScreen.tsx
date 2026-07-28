@@ -12,7 +12,8 @@ type Href =
   | '/(app)/settings/language'
   | '/(app)/settings/connection'
   | '/(app)/settings/account'
-  | '/(app)/bowl-lab';
+  | '/(app)/bowl-lab'
+  | '/gl-layout-probe';
 
 function Row({ href, title }: { href: Href; title: string }) {
   return (
@@ -76,6 +77,7 @@ export function SettingsScreen() {
           <>
             <Text style={styles.heading}>{t('settings.development')}</Text>
             <Row href="/(app)/bowl-lab" title={t('settings.bowlLab')} />
+            <Row href="/gl-layout-probe" title={t('settings.glLayoutProbe')} />
             <Text style={styles.developmentNote}>{t('settings.developmentOnly')}</Text>
           </>
         ) : null}
