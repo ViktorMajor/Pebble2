@@ -2,12 +2,13 @@ import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { colors, motion } from '../../design/tokens';
+import { inspectionRotationAfterDrag, isInspectionDrag } from './bowlInteraction';
 import { assignPebblesToLayout } from './bowlLayouts';
 import type { BowlEnvironment } from './bowlEnvironment';
 import type { PreviewPebbleSpec } from './pairingPreview';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 
-type Props = { pebbles: HeldPebble[]; previewPebbles?: readonly PreviewPebbleSpec[]; environment: BowlEnvironment; composition?: 'bowl' | 'pairing-single' | 'pairing-two'; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
+type Props = { pebbles: HeldPebble[]; previewPebbles?: readonly PreviewPebbleSpec[]; environment: BowlEnvironment; composition?: 'bowl' | 'pairing-single' | 'pairing-two'; disabled: boolean; reducedMotion: boolean; selectedPebbleId: string | null; onSelectedPebbleChange: (id: string | null) => void; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
 const FALLBACK_COLORS = ['#9B9285', '#718078', '#8E6F61', '#596766', '#A18D70', '#4E5958'];
 const PREVIEW_POSITIONS = [
   { left: '39%', top: '45%', rotate: '-8deg' },
@@ -15,22 +16,36 @@ const PREVIEW_POSITIONS = [
   { left: '50%', top: '32%', rotate: '2deg' },
 ] as const;
 
-export function BowlFallback({ pebbles, previewPebbles = [], environment, composition = 'bowl', disabled, reducedMotion, onSend, onTouch }: Props) {
+export function BowlFallback({ pebbles, previewPebbles = [], environment, composition = 'bowl', disabled, reducedMotion, selectedPebbleId, onSelectedPebbleChange, onSend, onTouch }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completed = useRef(false);
   const [travel] = useState(() => new Animated.Value(0));
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [inspectionRotation, setInspectionRotation] = useState<{ id: string | null; yaw: number }>({ id: null, yaw: 0 });
+  const pressStartedSelected = useRef(false);
+  const pointerStartX = useRef(0);
+  const pointerLastX = useRef(0);
+  const pointerMoved = useRef(false);
   const [sceneWidth, setSceneWidth] = useState(360);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); travel.stopAnimation(); }, [travel]);
   const assignments = useMemo(() => assignPebblesToLayout(pebbles), [pebbles]);
   const bowlWidth = Math.min(sceneWidth * 0.74, sceneWidth - 48);
   const bowlHeight = bowlWidth * 0.52;
-  const begin = (pebble: HeldPebble) => {
+  const begin = (pebble: HeldPebble, pageX: number) => {
     if (disabled || busyId) return;
-    completed.current = false; setBusyId(pebble.id); travel.setValue(0);
+    pointerStartX.current = pageX;
+    pointerLastX.current = pageX;
+    pointerMoved.current = false;
+    pressStartedSelected.current = selectedPebbleId === pebble.id;
+    completed.current = false;
+    onSelectedPebbleChange(pebble.id);
     if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    if (!pressStartedSelected.current) return;
+    setBusyId(pebble.id); travel.setValue(0);
     timer.current = setTimeout(() => {
+      if (pointerMoved.current) return;
       timer.current = null; completed.current = true;
+      if (Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       if (reducedMotion) {
         void onSend(pebble.id).finally(() => setBusyId(null));
         return;
@@ -40,12 +55,25 @@ export function BowlFallback({ pebbles, previewPebbles = [], environment, compos
       });
     }, HOLD_DURATION_MS);
   };
+  const rotate = (pageX: number) => {
+    if (!selectedPebbleId) return;
+    if (!pointerMoved.current && !isInspectionDrag(pointerStartX.current, pageX)) return;
+    pointerMoved.current = true;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    setBusyId(null);
+    setInspectionRotation((current) => ({
+      id: selectedPebbleId,
+      yaw: inspectionRotationAfterDrag(current.id === selectedPebbleId ? current.yaw : 0, pageX - pointerLastX.current),
+    }));
+    pointerLastX.current = pageX;
+  };
   const end = (pebble: HeldPebble) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     if (!completed.current) {
       Animated.timing(travel, { toValue: 0, duration: reducedMotion ? 0 : motion.pickup, useNativeDriver: true }).start();
-      if (pebble.incoming && !pebble.touched && pebble.transferEventId) void onTouch(pebble.transferEventId).finally(() => setBusyId(null));
+      if (!pointerMoved.current && pebble.incoming && !pebble.touched && pebble.transferEventId) void onTouch(pebble.transferEventId).finally(() => setBusyId(null));
       else setBusyId(null);
     }
   };
@@ -60,32 +88,35 @@ export function BowlFallback({ pebbles, previewPebbles = [], environment, compos
 
   return <View style={[styles.scene, { backgroundColor: environment.backgroundEdge }]} onLayout={(event) => setSceneWidth(event.nativeEvent.layout.width)}>
     <View pointerEvents="none" style={[styles.haze, { backgroundColor: environment.backgroundCenter }]} />
+    <Pressable accessibilityElementsHidden importantForAccessibility="no-hide-descendants" onPress={() => onSelectedPebbleChange(null)} style={StyleSheet.absoluteFill} />
     <View style={[styles.bowl, composition !== 'bowl' && styles.pairingBowl, { width: bowlWidth, height: bowlHeight, marginLeft: -bowlWidth / 2, marginTop: -bowlHeight * 0.42 }]}>
       <View style={styles.backRim} />
       <View style={styles.inside} />
       {assignments.map(({ pebble, slot: item }) => {
         const isBusy = busyId === pebble.id;
+        const isSelected = selectedPebbleId === pebble.id;
         return <Animated.View key={pebble.id} style={[styles.pebbleWrap, {
           left: `${50 + item.position[0] * 25}%`,
           top: `${47 - item.position[2] * 24 - (item.position[1] - 0.46) * 20}%`,
-          transform: [{ scale: item.scale }, { rotate: `${item.rotation[2]}rad` }, ...(isBusy ? selectedTransform.transform : [])],
+          transform: [{ scale: item.scale }, { rotate: `${item.rotation[2]}rad` }, { translateY: isSelected ? -45 : 0 }, { rotateY: `${isSelected && inspectionRotation.id === pebble.id ? inspectionRotation.yaw : 0}rad` }, ...(isBusy ? selectedTransform.transform : [])],
           opacity: isBusy ? selectedTransform.opacity : 1,
         }]}>
-          <View style={styles.contactPenumbra} />
-          <View style={styles.contactCore} />
-          <Pressable accessibilityRole="button" onPressIn={() => begin(pebble)} onPressOut={() => end(pebble)} style={[styles.pebble, {
+          <View style={[styles.contactPenumbra, isSelected && styles.selectedPenumbra]} />
+          <View style={[styles.contactCore, isSelected && styles.selectedCore]} />
+          <Pressable accessibilityElementsHidden importantForAccessibility="no-hide-descendants" onPressIn={(event) => begin(pebble, event.nativeEvent.pageX)} onTouchMove={(event) => rotate(event.nativeEvent.pageX)} onPressOut={() => end(pebble)} style={[styles.pebble, {
             backgroundColor: pebble.incoming && !pebble.touched ? '#B9AFA3' : FALLBACK_COLORS[pebble.visualVariant] ?? FALLBACK_COLORS[0],
           }]} />
         </Animated.View>;
       })}
-      {composition !== 'bowl' ? <View pointerEvents="none" importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>{previewPebbles.slice(0, 3).map((pebble, index) => {
+      {composition !== 'bowl' ? <View importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>{previewPebbles.slice(0, 3).map((pebble, index) => {
         const placement = PREVIEW_POSITIONS[index];
         if (!placement) return null;
-        return <View key={pebble.previewKey} style={[styles.previewPebbleWrap, { left: placement.left, top: placement.top, transform: [{ rotate: placement.rotate }] }]}>
+        const isSelected = selectedPebbleId === pebble.previewKey;
+        return <Pressable accessibilityElementsHidden key={pebble.previewKey} onPress={() => { onSelectedPebbleChange(pebble.previewKey); if (Platform.OS !== 'web') void Haptics.selectionAsync(); }} style={[styles.previewPebbleWrap, { left: placement.left, top: placement.top, transform: [{ translateY: isSelected ? -45 : 0 }, { rotate: placement.rotate }] }]}>
           <View style={styles.previewPenumbra} />
           <View style={styles.previewCore} />
           <View style={[styles.previewPebble, { backgroundColor: FALLBACK_COLORS[pebble.visualVariant] ?? FALLBACK_COLORS[0] }]} />
-        </View>;
+        </Pressable>;
       })}</View> : null}
       <View pointerEvents="none" style={styles.frontRim} />
     </View>
@@ -103,6 +134,8 @@ const styles = StyleSheet.create({
   pebbleWrap: { position: 'absolute', marginLeft: -30, marginTop: -21, width: 60, height: 46 },
   contactPenumbra: { position: 'absolute', left: 1, right: 1, bottom: -7, height: 17, borderRadius: 20, backgroundColor: '#817D74', opacity: 0.045 },
   contactCore: { position: 'absolute', left: 12, right: 12, bottom: -3, height: 7, borderRadius: 12, backgroundColor: '#77746C', opacity: 0.135 },
+  selectedPenumbra: { opacity: 0.018, transform: [{ translateY: 45 }, { scale: 1.1 }] },
+  selectedCore: { opacity: 0.04, transform: [{ translateY: 45 }, { scale: 1.1 }] },
   pebble: { width: 60, height: 43, borderRadius: 30, borderWidth: StyleSheet.hairlineWidth, borderColor: '#AEA99F', shadowColor: colors.contact, shadowOpacity: 0.16, shadowRadius: 6, elevation: 3 },
   previewPebbleWrap: { position: 'absolute', marginLeft: -25, marginTop: -17, width: 51, height: 37 },
   previewPenumbra: { position: 'absolute', left: 3, right: 3, bottom: -5, height: 12, borderRadius: 20, backgroundColor: '#817D74', opacity: 0.045 },

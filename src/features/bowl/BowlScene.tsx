@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bowlLighting, motion } from '../../design/tokens';
 import { BOWL_WORLD_BOUNDS, calculateBowlFraming, CAMERA_LOOK_AT, measuredBowlViewport, type BowlViewport } from './bowlComposition';
 import { assignPebblesToLayout, getBowlLayout } from './bowlLayouts';
+import { inspectionRotationAfterDrag, isInspectionDrag, SELECTED_PEBBLE_LIFT, SEND_PREPARATION_LIFT } from './bowlInteraction';
 import type { BowlEnvironment } from './bowlEnvironment';
 import { BowlFallback } from './BowlFallback';
 import { validateNativeSurface } from './nativeSurfaceValidation';
@@ -87,10 +88,12 @@ type Props = {
   onMetrics?: (metrics: BowlSceneMetrics) => void;
   onSend: (id: string) => Promise<void>;
   onTouch: (eventId: string) => Promise<void>;
+  selectedPebbleId?: string | null;
+  onSelectedPebbleChange?: (id: string | null) => void;
 };
 type BoundaryProps = { children: ReactNode; fallback: ReactNode; onFailure?: () => void };
 type BoundaryState = { failed: boolean };
-type MotionPhase = 'rest' | 'holding' | 'settling' | 'departing' | 'arriving';
+type MotionPhase = 'rest' | 'selected' | 'preparing' | 'rotating' | 'settling' | 'departing' | 'arriving';
 
 let mountedCanvasInstances = 0;
 let rendererMountCount = 0;
@@ -102,12 +105,12 @@ class GLBoundary extends Component<BoundaryProps, BoundaryState> {
   render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
 
-function BowlMesh({ diagnostics, position = [0, -0.12, 0], scale = 1 }: { diagnostics?: BowlDiagnosticOptions; position?: readonly [number, number, number]; scale?: number }) {
+function BowlMesh({ diagnostics, position = [0, -0.12, 0], scale = 1, onBackgroundPress }: { diagnostics?: BowlDiagnosticOptions; position?: readonly [number, number, number]; scale?: number; onBackgroundPress?: () => void }) {
   const geometry = useMemo(() => createBowlGeometry(), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
   if (diagnostics?.hideBowl) return null;
   return <group position={position} scale={scale}>
-    <mesh geometry={geometry} receiveShadow castShadow renderOrder={1}>
+    <mesh geometry={geometry} receiveShadow castShadow renderOrder={1} onPointerDown={(event) => { event.stopPropagation(); onBackgroundPress?.(); }}>
       {diagnostics?.unlit ? (
         <meshBasicMaterial color="#FFFFFF" wireframe={diagnostics.wireframe} side={THREE.DoubleSide} vertexColors />
       ) : (
@@ -123,7 +126,7 @@ function Atmosphere({ environment }: { environment: BowlEnvironment }) {
     centerColor: { value: new THREE.Color(environment.backgroundCenter) },
     hazeColor: { value: new THREE.Color(environment.backgroundHaze) },
   }), [environment.backgroundCenter, environment.backgroundEdge, environment.backgroundHaze]);
-  return <mesh frustumCulled={false} renderOrder={-20}>
+  return <mesh frustumCulled={false} renderOrder={-20} raycast={() => undefined}>
     <planeGeometry args={[2, 2]} />
     <shaderMaterial
       uniforms={uniforms}
@@ -164,25 +167,26 @@ function quadraticBezier(
 const CONTACT_SHADOW_VERTEX_SHADER = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }';
 const CONTACT_SHADOW_FRAGMENT_SHADER = 'uniform vec3 shadowColor; uniform float shadowOpacity; uniform float softness; varying vec2 vUv; void main(){ vec2 point=(vUv-vec2(0.5))*2.0; float radiusSquared=dot(point,point); float feather=1.0-smoothstep(0.68,1.0,sqrt(radiusSquared)); float alpha=exp(-radiusSquared*softness)*feather*shadowOpacity; gl_FragColor=vec4(shadowColor,alpha); }';
 
-function PebbleContactShadow({ visualSeed, visualVariant, layer, diagnostics }: { visualSeed: number; visualVariant: number; layer: number; diagnostics?: BowlDiagnosticOptions }) {
+function PebbleContactShadow({ visualSeed, visualVariant, layer, diagnostics, elevated = false }: { visualSeed: number; visualVariant: number; layer: number; diagnostics?: BowlDiagnosticOptions; elevated?: boolean }) {
   const materialSpec = useMemo(() => pebbleMaterial(visualSeed, visualVariant), [visualSeed, visualVariant]);
-  const coreUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#77746C') }, shadowOpacity: { value: 0.135 }, softness: { value: 4.8 } }), []);
-  const penumbraUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#817D74') }, shadowOpacity: { value: 0.045 }, softness: { value: 2.35 } }), []);
+  const coreUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#77746C') }, shadowOpacity: { value: elevated ? 0.04 : 0.075 }, softness: { value: 3.25 } }), [elevated]);
+  const penumbraUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#817D74') }, shadowOpacity: { value: elevated ? 0.018 : 0.028 }, softness: { value: 1.45 } }), [elevated]);
   const mode = diagnostics?.contactShadowMode ?? 'both';
+  const shadowScale = elevated ? 1.1 : 1;
   if (mode === 'none' || diagnostics?.hidePebbles) return null;
   return <group position={[0, materialSpec.contactOffsetY, 0]}>
-    {mode !== 'penumbra' ? <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[materialSpec.shadowCoreScale[0], materialSpec.shadowCoreScale[1], 1]} renderOrder={7 + layer} raycast={() => undefined}>
+    {mode !== 'penumbra' ? <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[materialSpec.shadowCoreScale[0] * shadowScale, materialSpec.shadowCoreScale[1] * shadowScale, 1]} renderOrder={9 + layer} raycast={() => undefined}>
       <circleGeometry args={[0.47, 32]} />
-      <shaderMaterial uniforms={coreUniforms} vertexShader={CONTACT_SHADOW_VERTEX_SHADER} fragmentShader={CONTACT_SHADOW_FRAGMENT_SHADER} transparent depthWrite={false} />
+      <shaderMaterial uniforms={coreUniforms} vertexShader={CONTACT_SHADOW_VERTEX_SHADER} fragmentShader={CONTACT_SHADOW_FRAGMENT_SHADER} transparent depthTest={!elevated} depthWrite={false} />
     </mesh> : null}
-    {mode !== 'core' ? <mesh position={[0, -0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[materialSpec.shadowPenumbraScale[0], materialSpec.shadowPenumbraScale[1], 1]} renderOrder={6 + layer} raycast={() => undefined}>
+    {mode !== 'core' ? <mesh position={[0, -0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[materialSpec.shadowPenumbraScale[0] * shadowScale, materialSpec.shadowPenumbraScale[1] * shadowScale, 1]} renderOrder={8 + layer} raycast={() => undefined}>
       <circleGeometry args={[0.47, 36]} />
-      <shaderMaterial uniforms={penumbraUniforms} vertexShader={CONTACT_SHADOW_VERTEX_SHADER} fragmentShader={CONTACT_SHADOW_FRAGMENT_SHADER} transparent depthWrite={false} />
+      <shaderMaterial uniforms={penumbraUniforms} vertexShader={CONTACT_SHADOW_VERTEX_SHADER} fragmentShader={CONTACT_SHADOW_FRAGMENT_SHADER} transparent depthTest={!elevated} depthWrite={false} />
     </mesh> : null}
   </group>;
 }
 
-function PebbleVisual({ visualSeed, visualVariant, incoming = false, diagnostics, layer, materialRef, onPointerDown, onPointerUp, onPointerOut }: {
+function PebbleVisual({ visualSeed, visualVariant, incoming = false, diagnostics, layer, materialRef, onPointerDown, onPointerMove, onPointerUp, onPointerOut }: {
   visualSeed: number;
   visualVariant: number;
   incoming?: boolean;
@@ -190,6 +194,7 @@ function PebbleVisual({ visualSeed, visualVariant, incoming = false, diagnostics
   layer: number;
   materialRef?: RefObject<import('three').MeshPhysicalMaterial | null>;
   onPointerDown?: (event: ThreeEvent<PointerEvent>) => void;
+  onPointerMove?: (event: ThreeEvent<PointerEvent>) => void;
   onPointerUp?: (event: ThreeEvent<PointerEvent>) => void;
   onPointerOut?: (event: ThreeEvent<PointerEvent>) => void;
 }) {
@@ -208,7 +213,7 @@ function PebbleVisual({ visualSeed, visualVariant, incoming = false, diagnostics
 
   if (diagnostics?.hidePebbles) return null;
   return <>
-    <mesh geometry={geometry} castShadow receiveShadow onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerOut={onPointerOut} raycast={onPointerDown ? undefined : () => undefined} renderOrder={10 + layer}>
+    <mesh geometry={geometry} castShadow receiveShadow onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerOut={onPointerOut} raycast={onPointerDown ? undefined : () => undefined} renderOrder={10 + layer}>
       {diagnostics?.unlit ? (
         <meshBasicMaterial color="#FFFFFF" wireframe={diagnostics.wireframe} />
       ) : diagnostics?.materialMode === 'flat' ? (
@@ -220,25 +225,74 @@ function PebbleVisual({ visualSeed, visualVariant, incoming = false, diagnostics
   </>;
 }
 
-function PairingPreviewStones({ pebbles, diagnostics, position, scale }: { pebbles: readonly PreviewPebbleSpec[]; diagnostics?: BowlDiagnosticOptions; position: readonly [number, number, number]; scale: number }) {
+function PreviewStone({ pebble, placement, selected, reducedMotion, diagnostics, onSelect }: { pebble: PreviewPebbleSpec; placement: (typeof PAIRING_PREVIEW_LAYOUT)[number]; selected: boolean; reducedMotion: boolean; diagnostics?: BowlDiagnosticOptions; onSelect: (id: string) => void }) {
+  const group = useRef<import('three').Group>(null);
+  const selectedRef = useRef(selected);
+  const pointerStartX = useRef(0);
+  const pointerLastX = useRef(0);
+  const targetYaw = useRef(0);
+  const { invalidate } = useThree();
+  useEffect(() => {
+    selectedRef.current = selected;
+    if (!selected) targetYaw.current = 0;
+    invalidate();
+  }, [invalidate, selected]);
+  useFrame((_state, delta) => {
+    const node = group.current;
+    if (!node) return;
+    const damping = reducedMotion ? 1 : 1 - Math.exp(-14 * Math.min(delta, 1 / 20));
+    const targetY = selected ? SELECTED_PEBBLE_LIFT : 0;
+    node.position.y = THREE.MathUtils.lerp(node.position.y, targetY, damping);
+    node.rotation.x = THREE.MathUtils.lerp(node.rotation.x, placement.rotation[0] + (selected ? 0.065 : 0), damping);
+    node.rotation.y = THREE.MathUtils.lerp(node.rotation.y, placement.rotation[1] + targetYaw.current, damping);
+    if (Math.abs(node.position.y - targetY) > 0.003 || Math.abs(node.rotation.y - placement.rotation[1] - targetYaw.current) > 0.003) invalidate();
+  });
+  const eventX = (event: ThreeEvent<PointerEvent>) => {
+    const native = event.nativeEvent as unknown as { pageX?: number; locationX?: number; offsetX?: number };
+    return native.pageX ?? native.locationX ?? native.offsetX ?? event.pointer.x;
+  };
+  const start = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    const x = eventX(event);
+    pointerStartX.current = x;
+    pointerLastX.current = x;
+    selectedRef.current = true;
+    onSelect(pebble.previewKey);
+    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+  };
+  const move = (event: ThreeEvent<PointerEvent>) => {
+    if (!selectedRef.current) return;
+    const x = eventX(event);
+    if (!isInspectionDrag(pointerStartX.current, x) && targetYaw.current === 0) return;
+    event.stopPropagation();
+    targetYaw.current = inspectionRotationAfterDrag(targetYaw.current, x - pointerLastX.current);
+    pointerLastX.current = x;
+    invalidate();
+  };
+  return <group position={placement.position} scale={placement.scale} renderOrder={10 + placement.layer}>
+    <group rotation={[0, placement.rotation[1], 0]}><PebbleContactShadow visualSeed={pebble.visualSeed} visualVariant={pebble.visualVariant} diagnostics={diagnostics} layer={placement.layer} elevated={selected} /></group>
+    <group ref={group} position={[0, 0, 0]} rotation={placement.rotation}><PebbleVisual visualSeed={pebble.visualSeed} visualVariant={pebble.visualVariant} diagnostics={diagnostics} layer={placement.layer} onPointerDown={start} onPointerMove={move} onPointerUp={(event) => event.stopPropagation()} onPointerOut={(event) => event.stopPropagation()} /></group>
+  </group>;
+}
+
+function PairingPreviewStones({ pebbles, diagnostics, position, scale, selectedPebbleId, reducedMotion, onSelect }: { pebbles: readonly PreviewPebbleSpec[]; diagnostics?: BowlDiagnosticOptions; position: readonly [number, number, number]; scale: number; selectedPebbleId: string | null; reducedMotion: boolean; onSelect: (id: string) => void }) {
   return <group position={position} scale={scale}>{pebbles.slice(0, 3).map((pebble, index) => {
     const placement = PAIRING_PREVIEW_LAYOUT[index];
     if (!placement) return null;
-    return <group key={pebble.previewKey} position={placement.position} scale={placement.scale} renderOrder={10 + placement.layer}>
-      <group rotation={[0, placement.rotation[1], 0]}><PebbleContactShadow visualSeed={pebble.visualSeed} visualVariant={pebble.visualVariant} diagnostics={diagnostics} layer={placement.layer} /></group>
-      <group rotation={placement.rotation}><PebbleVisual visualSeed={pebble.visualSeed} visualVariant={pebble.visualVariant} diagnostics={diagnostics} layer={placement.layer} /></group>
-    </group>;
+    return <PreviewStone key={pebble.previewKey} pebble={pebble} placement={placement} selected={selectedPebbleId === pebble.previewKey} reducedMotion={reducedMotion} diagnostics={diagnostics} onSelect={onSelect} />;
   })}</group>;
 }
 
-function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugCommand, onActivity, onSend, onTouch }: {
+function Stone({ pebble, slot, disabled, selected, reducedMotion, diagnostics, debugCommand, onActivity, onSelect, onSend, onTouch }: {
   pebble: HeldPebble;
   slot: ReturnType<typeof getBowlLayout>[number];
   disabled: boolean;
+  selected: boolean;
   reducedMotion: boolean;
   diagnostics?: BowlDiagnosticOptions;
   debugCommand?: BowlAnimationCommand;
   onActivity: (id: string, phase: MotionPhase) => void;
+  onSelect: (id: string) => void;
   onSend: (id: string) => Promise<void>;
   onTouch: (id: string) => Promise<void>;
 }) {
@@ -249,6 +303,13 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
   const elapsed = useRef(0);
   const busy = useRef(false);
   const sendCommitted = useRef(false);
+  const selectedRef = useRef(selected);
+  const pressStartedSelected = useRef(false);
+  const pointerStartX = useRef(0);
+  const pointerLastX = useRef(0);
+  const pointerMoved = useRef(false);
+  const inspectionYaw = useRef(0);
+  const targetInspectionYaw = useRef(0);
   const departureStart = useRef(new THREE.Vector3(...slot.position));
   const targetVector = useMemo(() => new THREE.Vector3(), []);
   const lastSlot = useRef(slot);
@@ -274,13 +335,26 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
   }, [onActivity, pebble.id, setPhase, slot.arrivalFrom, slot.rotation]);
 
   useEffect(() => {
+    selectedRef.current = selected;
+    if (selected) {
+      if (phase.current === 'rest' || phase.current === 'settling') setPhase('selected');
+      return;
+    }
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    busy.current = false;
+    targetInspectionYaw.current = 0;
+    if (phase.current === 'selected' || phase.current === 'preparing' || phase.current === 'rotating') setPhase('settling');
+  }, [selected, setPhase]);
+
+  useEffect(() => {
     if (lastSlot.current !== slot && phase.current === 'rest') setPhase('settling');
     lastSlot.current = slot;
   }, [setPhase, slot]);
 
   useEffect(() => {
     if (!debugCommand) return;
-    if (debugCommand.mode === 'hold') setPhase('holding');
+    if (debugCommand.mode === 'hold') setPhase('preparing');
     if (debugCommand.mode === 'cancel') setPhase('settling');
     if (debugCommand.mode === 'departure') {
       departureStart.current.copy(group.current?.position ?? new THREE.Vector3(...slot.position));
@@ -303,12 +377,13 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
     elapsed.current += clampedDelta * 1000;
 
     if (reducedMotion) {
-      node.position.set(...slot.position);
-      node.rotation.set(...slot.rotation);
+      const locallySelected = currentPhase === 'selected' || currentPhase === 'preparing' || currentPhase === 'rotating';
+      node.position.set(slot.position[0], slot.position[1] + (currentPhase === 'preparing' ? SEND_PREPARATION_LIFT : locallySelected ? SELECTED_PEBBLE_LIFT : 0), slot.position[2]);
+      node.rotation.set(slot.rotation[0] + (locallySelected ? 0.065 : 0), slot.rotation[1] + targetInspectionYaw.current, slot.rotation[2]);
       if (currentPhase === 'departing' && !sendCommitted.current) {
         sendCommitted.current = true;
         void onSend(pebble.id).catch(() => undefined).finally(() => { busy.current = false; setPhase('rest'); });
-      } else if (currentPhase !== 'rest') setPhase('rest');
+      } else if (currentPhase === 'arriving' || currentPhase === 'settling') setPhase('rest');
       return;
     }
 
@@ -344,46 +419,80 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
       return;
     }
 
-    const lift = currentPhase === 'holding' ? 0.28 : 0;
+    const lift = currentPhase === 'preparing' ? SEND_PREPARATION_LIFT : currentPhase === 'selected' || currentPhase === 'rotating' ? SELECTED_PEBBLE_LIFT : 0;
     const targetY = slot.position[1] + lift;
-    const damping = 1 - Math.exp(-(currentPhase === 'holding' ? 18 : 14) * clampedDelta);
+    const damping = 1 - Math.exp(-(currentPhase === 'rotating' ? 28 : currentPhase === 'preparing' ? 18 : 14) * clampedDelta);
     node.position.x = THREE.MathUtils.lerp(node.position.x, slot.position[0], damping);
     node.position.y = THREE.MathUtils.lerp(node.position.y, targetY, damping);
     node.position.z = THREE.MathUtils.lerp(node.position.z, slot.position[2], damping);
-    node.rotation.x = THREE.MathUtils.lerp(node.rotation.x, slot.rotation[0] + (currentPhase === 'holding' ? 0.085 : 0), damping);
-    node.rotation.y = THREE.MathUtils.lerp(node.rotation.y, slot.rotation[1] + (currentPhase === 'holding' ? 0.07 : 0), damping);
+    const selectedTilt = currentPhase === 'selected' || currentPhase === 'rotating' || currentPhase === 'preparing' ? 0.065 : 0;
+    const preparationTurn = currentPhase === 'preparing' ? 0.04 : 0;
+    node.rotation.x = THREE.MathUtils.lerp(node.rotation.x, slot.rotation[0] + selectedTilt, damping);
+    node.rotation.y = THREE.MathUtils.lerp(node.rotation.y, slot.rotation[1] + targetInspectionYaw.current + preparationTurn, damping);
+    inspectionYaw.current = node.rotation.y - slot.rotation[1];
     const moving = Math.abs(node.position.y - targetY) > 0.003
       || Math.abs(node.position.x - slot.position[0]) > 0.003
       || Math.abs(node.position.z - slot.position[2]) > 0.003
-      || Math.abs(node.rotation.x - slot.rotation[0] - (currentPhase === 'holding' ? 0.085 : 0)) > 0.003;
+      || Math.abs(node.rotation.x - slot.rotation[0] - selectedTilt) > 0.003
+      || Math.abs(node.rotation.y - slot.rotation[1] - targetInspectionYaw.current - preparationTurn) > 0.003;
     if (moving) invalidate();
     else if (currentPhase === 'settling') setPhase('rest');
   });
 
+  const eventX = (event: ThreeEvent<PointerEvent>) => {
+    const native = event.nativeEvent as unknown as { pageX?: number; locationX?: number; offsetX?: number };
+    return native.pageX ?? native.locationX ?? native.offsetX ?? event.pointer.x;
+  };
   const start = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     if (disabled || busy.current) return;
     (event.target as unknown as { setPointerCapture?: (pointerId: number) => void }).setPointerCapture?.(event.pointerId);
-    busy.current = true;
+    const x = eventX(event);
+    pointerStartX.current = x;
+    pointerLastX.current = x;
+    pointerMoved.current = false;
+    pressStartedSelected.current = selectedRef.current;
     sendCommitted.current = false;
-    setPhase('holding');
+    if (!selectedRef.current) {
+      selectedRef.current = true;
+      onSelect(pebble.id);
+      setPhase('selected');
+      if (Platform.OS !== 'web') void Haptics.selectionAsync();
+      return;
+    }
+    busy.current = true;
+    setPhase('preparing');
     if (Platform.OS !== 'web') void Haptics.selectionAsync();
     timer.current = setTimeout(() => {
       timer.current = null;
+      if (pointerMoved.current || !selectedRef.current) return;
+      if (Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       departureStart.current.copy(group.current?.position ?? new THREE.Vector3(...slot.position));
       setPhase('departing');
     }, HOLD_DURATION_MS);
+  };
+  const move = (event: ThreeEvent<PointerEvent>) => {
+    if (!selectedRef.current) return;
+    const x = eventX(event);
+    if (!pointerMoved.current && !isInspectionDrag(pointerStartX.current, x)) return;
+    event.stopPropagation();
+    pointerMoved.current = true;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    busy.current = false;
+    targetInspectionYaw.current = inspectionRotationAfterDrag(targetInspectionYaw.current, x - pointerLastX.current);
+    pointerLastX.current = x;
+    if (phase.current !== 'rotating') setPhase('rotating'); else invalidate();
   };
   const end = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     (event.target as unknown as { releasePointerCapture?: (pointerId: number) => void }).releasePointerCapture?.(event.pointerId);
     if (phase.current === 'departing') return;
-    const wasPendingHold = timer.current !== null;
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    setPhase('settling');
+    setPhase(selectedRef.current ? 'selected' : 'settling');
     busy.current = false;
-    if (wasPendingHold && !disabled && pebble.incoming && !pebble.touched && pebble.transferEventId) {
+    if (!pointerMoved.current && !disabled && pebble.incoming && !pebble.touched && pebble.transferEventId) {
       void onTouch(pebble.transferEventId);
     }
   };
@@ -394,13 +503,13 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     busy.current = false;
-    setPhase('settling');
+    setPhase(selectedRef.current ? 'selected' : 'settling');
   };
 
   if (diagnostics?.hidePebbles) return null;
   return <>
     <group position={slot.position} rotation={[0, slot.rotation[1], 0]} scale={slot.scale} renderOrder={7 + slot.layer}>
-      <PebbleContactShadow visualSeed={pebble.visualSeed} visualVariant={pebble.visualVariant} diagnostics={diagnostics} layer={slot.layer} />
+      <PebbleContactShadow visualSeed={pebble.visualSeed} visualVariant={pebble.visualVariant} diagnostics={diagnostics} layer={slot.layer} elevated={selected} />
     </group>
     <group ref={group} position={slot.position} rotation={slot.rotation} scale={slot.scale} renderOrder={10 + slot.layer}><PebbleVisual
       visualSeed={pebble.visualSeed}
@@ -409,7 +518,7 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
       diagnostics={diagnostics}
       layer={slot.layer}
       materialRef={material}
-      onPointerDown={start} onPointerUp={end} onPointerOut={cancel}
+      onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerOut={cancel}
     /></group>
   </>;
 }
@@ -492,7 +601,7 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
 
 type WorldProps = Omit<Props, 'forceFallback' | 'onMetrics'> & { onMetrics?: (metrics: CameraMetrics) => void };
 
-function World({ pebbles, previewPebbles = [], environment, disabled = false, reducedMotion, diagnostics, animationCommand, composition = 'bowl', onMetrics, onSend, onTouch }: WorldProps) {
+function World({ pebbles, previewPebbles = [], environment, disabled = false, reducedMotion, diagnostics, animationCommand, composition = 'bowl', selectedPebbleId = null, onSelectedPebbleChange, onMetrics, onSend, onTouch }: WorldProps) {
   const { invalidate } = useThree();
   const [activeAnimations, setActiveAnimations] = useState<Map<string, MotionPhase>>(() => new Map());
   const onActivity = useCallback((id: string, next: MotionPhase) => {
@@ -505,6 +614,8 @@ function World({ pebbles, previewPebbles = [], environment, disabled = false, re
   useEffect(() => { invalidate(); }, [environment, invalidate, pebbles]);
   const assignments = useMemo(() => assignPebblesToLayout(pebbles), [pebbles]);
   const diagnosticTarget = assignments.at(-1)?.pebble.id;
+  const interactionBlocked = [...activeAnimations.values()].some((phase) => phase === 'departing' || phase === 'arriving');
+  const clearSelection = useCallback(() => onSelectedPebbleChange?.(null), [onSelectedPebbleChange]);
   return <>
     <color attach="background" args={[environment.backgroundEdge]} />
     <Atmosphere environment={environment} />
@@ -512,8 +623,8 @@ function World({ pebbles, previewPebbles = [], environment, disabled = false, re
     <directionalLight position={[-4, 6, 5]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.key} intensity={diagnostics?.fixedWhiteLight ? 1.2 : environment.keyIntensity} castShadow shadow-mapSize-width={diagnostics?.lowQuality ? 256 : 512} shadow-mapSize-height={diagnostics?.lowQuality ? 256 : 512} shadow-bias={-0.0004} />
     <directionalLight position={[4, 3, -4]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.rim} intensity={diagnostics?.fixedWhiteLight ? 0.45 : environment.rimIntensity} />
     <pointLight position={[0, 1.5, 2.4]} color="#D2CCC6" intensity={bowlLighting.fill} distance={8} decay={2} />
-    {composition === 'bowl' ? <BowlMesh diagnostics={diagnostics} /> : <><BowlMesh diagnostics={diagnostics} scale={0.84} /><PairingPreviewStones pebbles={previewPebbles} diagnostics={diagnostics} position={[0, -0.12, 0]} scale={0.84} /></>}
-    {composition === 'bowl' ? assignments.map(({ pebble, slot: assignedSlot }) => <Stone key={pebble.id} pebble={pebble} slot={assignedSlot} disabled={disabled || (activeAnimations.size > 0 && !activeAnimations.has(pebble.id))} reducedMotion={reducedMotion} diagnostics={diagnostics} debugCommand={pebble.id === diagnosticTarget ? animationCommand : undefined} onActivity={onActivity} onSend={onSend} onTouch={onTouch} />) : null}
+    {composition === 'bowl' ? <BowlMesh diagnostics={diagnostics} onBackgroundPress={clearSelection} /> : <><BowlMesh diagnostics={diagnostics} scale={0.84} onBackgroundPress={clearSelection} /><PairingPreviewStones pebbles={previewPebbles} diagnostics={diagnostics} position={[0, -0.12, 0]} scale={0.84} selectedPebbleId={selectedPebbleId} reducedMotion={reducedMotion} onSelect={(id) => onSelectedPebbleChange?.(id)} /></>}
+    {composition === 'bowl' ? assignments.map(({ pebble, slot: assignedSlot }) => <Stone key={pebble.id} pebble={pebble} slot={assignedSlot} disabled={disabled || (interactionBlocked && !activeAnimations.has(pebble.id))} selected={selectedPebbleId === pebble.id} reducedMotion={reducedMotion} diagnostics={diagnostics} debugCommand={pebble.id === diagnosticTarget ? animationCommand : undefined} onActivity={onActivity} onSelect={(id) => onSelectedPebbleChange?.(id)} onSend={onSend} onTouch={onTouch} />) : null}
     <CameraRig environment={environment} diagnostics={diagnostics} activeAnimations={activeAnimations} onMetrics={onMetrics} />
   </>;
 }
@@ -528,6 +639,9 @@ export function BowlScene(props: Props) {
   const [glReady, setGlReady] = useState(false);
   const [glTimedOut, setGlTimedOut] = useState(false);
   const [glFailed, setGlFailed] = useState(false);
+  const [internalSelectedPebbleId, setInternalSelectedPebbleId] = useState<string | null>(null);
+  const selectedPebbleId = props.selectedPebbleId === undefined ? internalSelectedPebbleId : props.selectedPebbleId;
+  const onSelectedPebbleChange = props.onSelectedPebbleChange ?? setInternalSelectedPebbleId;
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setViewport((current) => measuredBowlViewport(width, height, current));
@@ -541,6 +655,9 @@ export function BowlScene(props: Props) {
     const timer = setTimeout(() => setGlTimedOut(true), 5000);
     return () => clearTimeout(timer);
   }, [glReady, props.forceFallback, viewport]);
+  useEffect(() => {
+    if (selectedPebbleId && !props.pebbles.some((pebble) => pebble.id === selectedPebbleId) && !props.previewPebbles?.some((pebble) => pebble.previewKey === selectedPebbleId)) onSelectedPebbleChange(null);
+  }, [onSelectedPebbleChange, props.pebbles, props.previewPebbles, selectedPebbleId]);
   useEffect(() => {
     if (!viewport) return;
     const measuredCamera = cameraMetrics ?? {
@@ -591,7 +708,7 @@ export function BowlScene(props: Props) {
       fallbackActive: Boolean(forceFallback || glTimedOut || glFailed),
     });
   }, [cameraMetrics, canvasLayout, forceFallback, glFailed, glReady, glTimedOut, insets.bottom, insets.left, insets.right, insets.top, onMetrics, props.diagnostics?.lowQuality, props.environment.keyIntensity, props.environment.rimIntensity, viewport, window.height, window.width]);
-  const fallback = <BowlFallback pebbles={props.pebbles} previewPebbles={props.previewPebbles} environment={props.environment} composition={props.composition} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} onSend={props.onSend} onTouch={props.onTouch} />;
+  const fallback = <BowlFallback pebbles={props.pebbles} previewPebbles={props.previewPebbles} environment={props.environment} composition={props.composition} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} selectedPebbleId={selectedPebbleId} onSelectedPebbleChange={onSelectedPebbleChange} onSend={props.onSend} onTouch={props.onTouch} />;
   const showFallback = Boolean(props.forceFallback || glTimedOut || glFailed);
   return <View onLayout={onLayout} style={[styles.container, { backgroundColor: props.environment.backgroundEdge }]}>
     {viewport ? <View style={[styles.measuredLayer, { width: viewport.width, height: viewport.height }]}>
@@ -613,9 +730,9 @@ export function BowlScene(props: Props) {
             gl.shadowMap.type = THREE.BasicShadowMap;
             setGlReady(true);
           }}
-          onPointerMissed={() => undefined}
+          onPointerMissed={() => onSelectedPebbleChange(null)}
         >
-          <World {...props} onMetrics={onMetrics ? setCameraMetrics : undefined} />
+          <World {...props} selectedPebbleId={selectedPebbleId} onSelectedPebbleChange={onSelectedPebbleChange} onMetrics={onMetrics ? setCameraMetrics : undefined} />
           <CanvasLifecycleCounter />
         </Canvas>
       </GLBoundary> : null}

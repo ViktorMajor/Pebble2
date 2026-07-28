@@ -73,7 +73,7 @@ test('repair introduces no screen-specific width workaround or camera compensati
 });
 
 test('pointer interactions and production routes retain their existing architecture', () => {
-  assert.match(scene, /onPointerDown=\{start\} onPointerUp=\{end\} onPointerOut=\{cancel\}/);
+  assert.match(scene, /onPointerDown=\{start\} onPointerMove=\{move\} onPointerUp=\{end\} onPointerOut=\{cancel\}/);
   assert.match(bowlRoute, /export default function BowlRoute/);
   assert.match(pairingRoute, /export default function PairingRoute/);
   assert.doesNotMatch([bowlRoute, pairingRoute].join('\n'), /setPixelRatio|nativeSurface|viewport workaround/i);

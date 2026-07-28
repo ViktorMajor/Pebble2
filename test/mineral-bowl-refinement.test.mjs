@@ -6,7 +6,7 @@ import {
   BOWL_LAYOUTS,
   estimateProjectedFootprintOverlap,
   IDENTITY_LAYOUT_ORDER,
-  PEBBLE_LAYOUT_SCALE_MULTIPLIER,
+  PEBBLE_FIXED_SCALE,
 } from '../src/features/bowl/bowlLayouts.ts';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -19,11 +19,12 @@ const packageJson = read('package.json');
 const luminances = [0.2922, 0.2031, 0.1798, 0.1278, 0.2780, 0.0947];
 
 test('zero-through-six layouts stay explicit, deterministic, open, and layered', () => {
-  assert.equal(PEBBLE_LAYOUT_SCALE_MULTIPLIER, 1.15);
+  assert.equal(PEBBLE_FIXED_SCALE, 1.14);
   assert.deepEqual(Object.keys(BOWL_LAYOUTS).map(Number), [0, 1, 2, 3, 4, 5, 6]);
   for (let count = 0; count <= 6; count += 1) {
     const layout = BOWL_LAYOUTS[count];
     assert.equal(layout.length, count);
+    assert.ok(layout.every((item) => item.scale === PEBBLE_FIXED_SCALE));
     assert.ok(estimateProjectedFootprintOverlap(layout) <= 0.2, `count ${count} overlap`);
     for (const item of layout) {
       assert.ok(Math.hypot(item.position[0], item.position[2]) < 1.58);
@@ -80,8 +81,9 @@ test('every visual stone owns a non-interactive contact core and penumbra', () =
   const shadow = scene.slice(scene.indexOf('function PebbleContactShadow'), scene.indexOf('function PebbleVisual'));
   assert.match(shadow, /shadowCoreScale/);
   assert.match(shadow, /shadowPenumbraScale/);
-  assert.match(shadow, /shadowOpacity: \{ value: 0\.135 \}/);
-  assert.match(shadow, /shadowOpacity: \{ value: 0\.045 \}/);
+  assert.match(shadow, /elevated \? 0\.04 : 0\.075/);
+  assert.match(shadow, /elevated \? 0\.018 : 0\.028/);
+  assert.match(shadow, /depthTest=\{!elevated\}/);
   assert.match(scene, /exp\(-radiusSquared\*softness\)/);
   assert.equal((shadow.match(/raycast=\{\(\) => undefined\}/g) ?? []).length, 2);
   assert.match(scene, /<PebbleContactShadow[\s\S]*<PebbleVisual/);

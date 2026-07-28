@@ -20,10 +20,12 @@ test('pairing uses exactly three visual-only preview stones', () => {
   assert.match(hero, /pebbles=\{\[\]\}/);
 });
 
-test('pairing preview shares PebbleVisual but has no domain interaction', () => {
-  const previewComponent = scene.slice(scene.indexOf('function PairingPreviewStones'), scene.indexOf('function Stone'));
+test('pairing preview shares PebbleVisual and local lift without domain interaction', () => {
+  const previewComponent = scene.slice(scene.indexOf('function PreviewStone'), scene.indexOf('function Stone'));
   assert.match(previewComponent, /<PebbleVisual/);
-  assert.doesNotMatch(previewComponent, /onPointer|onSend|onTouch|Haptics|HeldPebble/);
+  assert.match(previewComponent, /SELECTED_PEBBLE_LIFT/);
+  assert.match(previewComponent, /onPointerDown=\{start\}/);
+  assert.doesNotMatch(previewComponent, /onSend|onTouch|HeldPebble|HOLD_DURATION_MS/);
   assert.match(scene, /composition === 'bowl' \? <BowlMesh[\s\S]*<PairingPreviewStones/);
   assert.doesNotMatch(scene, /SecondaryBowl/);
   assert.equal((scene.match(/<PairingPreviewStones/g) ?? []).length, 1);
@@ -31,12 +33,12 @@ test('pairing preview shares PebbleVisual but has no domain interaction', () => 
   assert.doesNotMatch([hero, preview].join('\n'), /from ['"].*(supabase|bowlService|useHeldPebbles)/i);
 });
 
-test('fallback preview is passive and renders no secondary bowl', () => {
+test('fallback preview supports local selection and renders no secondary bowl', () => {
   assert.match(fallback, /importantForAccessibility="no-hide-descendants"/);
-  assert.match(fallback, /pointerEvents="none"/);
   assert.match(fallback, /previewPebbles\.slice\(0, 3\)\.map/);
-  const passivePreview = fallback.slice(fallback.indexOf("{composition !== 'bowl' ?"), fallback.indexOf('<View pointerEvents="none" style={styles.frontRim}'));
-  assert.doesNotMatch(passivePreview, /Pressable|begin\(|end\(/);
+  const localPreview = fallback.slice(fallback.indexOf("{composition !== 'bowl' ?"), fallback.indexOf('<View pointerEvents="none" style={styles.frontRim}'));
+  assert.match(localPreview, /onSelectedPebbleChange\(pebble\.previewKey\)/);
+  assert.doesNotMatch(localPreview, /onSend|onTouch|HOLD_DURATION_MS/);
   assert.doesNotMatch(fallback, /secondBowl|composition === 'pairing-two' \?/);
 });
 
@@ -64,7 +66,7 @@ test('procedural geometry is welded, smoothly shaded, finite, deterministic, and
 });
 
 test('smooth visual component keeps real pointer handlers and six-pebble domain unchanged', () => {
-  assert.match(scene, /onPointerDown=\{start\} onPointerUp=\{end\} onPointerOut=\{cancel\}/);
+  assert.match(scene, /onPointerDown=\{start\} onPointerMove=\{move\} onPointerUp=\{end\} onPointerOut=\{cancel\}/);
   assert.match(scene, /flatShading=\{false\}/);
   assert.match(geometry, /deleteAttribute\('normal'\)/);
   assert.match(geometry, /deleteAttribute\('uv'\)/);

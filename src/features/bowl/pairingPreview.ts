@@ -1,3 +1,5 @@
+import { PEBBLE_FIXED_SCALE } from './bowlLayouts';
+
 export type PreviewPebbleSpec = {
   previewKey: string;
   visualSeed: number;
@@ -20,7 +22,7 @@ export const PAIRING_PREVIEW_PEBBLES: readonly PreviewPebbleSpec[] = [
 ];
 
 export const PAIRING_PREVIEW_LAYOUT: readonly PreviewPebblePlacement[] = [
-  { position: [-0.51, 0.17, 0.23], rotation: [0.09, -0.34, 0.08], scale: 0.71, layer: 3 },
-  { position: [0.5, 0.19, 0.18], rotation: [-0.04, 0.46, -0.09], scale: 0.74, layer: 4 },
-  { position: [-0.02, 0.12, -0.42], rotation: [0.13, 0.08, 0.03], scale: 0.72, layer: 2 },
+  { position: [-0.78, 0.2, 0.31], rotation: [0.09, -0.34, 0.08], scale: PEBBLE_FIXED_SCALE, layer: 3 },
+  { position: [0.78, 0.22, 0.25], rotation: [-0.04, 0.46, -0.09], scale: PEBBLE_FIXED_SCALE, layer: 4 },
+  { position: [-0.02, 0.14, -0.57], rotation: [0.13, 0.08, 0.03], scale: PEBBLE_FIXED_SCALE, layer: 2 },
 ];
