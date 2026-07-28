@@ -8,20 +8,21 @@ The user normally sees only their own bowl. The partner's present inventory is p
 
 Existing Phase 17 development connections are migrated forward without rewriting transfer history. Two untouched provisional identities are retired deterministically, preferring one from each current holder. A retired row remains backend-auditable but cannot be selected, transferred, or returned by Bowl state. If fewer than two untouched identities are available, the connection is marked `legacy-six-migration-required` and transfers stop pending explicit review; the application never fabricates history to force a result.
 
-## Bright dark space
+## Luminous Mineral Space
 
-The scene is a quiet blue-hour interior, not a black showroom. Darkness frames the objects but may never hide them. The centre is softened and lighter than the edge, while the bowl and stones maintain explicit material separation. There is no heavy vignette, pure black, RGB edge glow, wellness beige, decorative room, literal table, or landscape.
+The scene is an airy mineral environment, not a dark showroom. Premium quality comes from material depth, proportion, typography, light, spacing, and precise transitions rather than darkness. A cool upper mist moves through a pearl centre into a restrained warm-mineral base. The space is bright and optimistic without becoming clinical white, beige wellness styling, candy pastel, glassmorphism, or a decorative room.
 
 Core tokens:
 
-- Background edge `#182126`; centre family `#243137`–`#2B383D`; haze family `#2D3C42`–`#34444A`.
-- Bowl outer `#626B6B`, inner `#7A817D`, rim `#8B918C`.
-- Primary text `#F0ECE4`, secondary `#BFC5C2`, functional `#D9DDDA`, muted `#929B98`.
-- Warm key `#CFC4B8`; cool rim `#BAC5C6`.
+- Environment upper `#DCE6E5`, centre `#EEECE5`, lower `#E8DED2`, elevated surface `#F4F1EB`, secondary surface `#E4E8E4`, and border `#C8D0CB`.
+- Bowl outer `#9B9D95`, inner `#B9B9AE`, rim `#D0CDC1`, contact `#747A75`, and reflected interior `#D2C4B5`.
+- Primary text `#303937`, relational text `#343936`, essential secondary text `#424C48`, muted decorative text `#8B9490`, and accessible error `#743633`.
+- Primary sage `#789287`, pressed sage `#667F75`, celadon `#AFC2B8`, warm accent `#D3B7A5`, and cool accent `#AABFC1`.
+- Pebbles `#C8C2B5`, `#8FA097`, `#AA9588`, `#7F8B89`, `#D0CCC1`, and `#68716F`.
 
-The warm and cool lights remain low-saturation neutral daylight. Their HSL saturation difference is capped at approximately ten percentage points. Neither may read as orange, cyan, teal, purple, neon, or complementary-color spectacle. Vignette darkening is capped at 12%.
+The warm and cool lights remain low-saturation neutral daylight. Their HSL saturation difference is capped below eight percentage points. Neither may read as orange, cyan, teal, purple, neon, or complementary-color spectacle. There is no black vignette.
 
-Scene-relative luminance targets are edge `1.00`, centre `1.28`, bowl outer `1.76`, bowl inner `2.02`, and visible pebble face `2.58`. The contact shadow floor is 60% of the adjacent interior value; the rim highlight is capped at 1.25× its local base. These targets are verified as relationships after tone mapping rather than by treating hexadecimal material colors as emitted light.
+Daytime lighting starts at ambient `1.25`, warm fill `0.75`, key `1.05`, rim `0.26`, and exposure `1.22`. The values stay within the prescribed broad-light ranges and are verified after tone mapping. Primary and essential functional text remain at least WCAG AA across every time stop; relational copy is dark graphite, never decorative low-contrast grey.
 
 ## Bowl and six identities
 
@@ -75,13 +76,13 @@ Neumorphism belongs to the physical objects, never to the application chrome. De
 
 ## Environment and accessibility
 
-Local-time morning, day, evening, and night states remain inside one bright-dark family. Night cannot crush the bowl or pebbles into black. Seasonal drift is secondary and never overrides minimum visibility. No location, weather, partner state, or network input is used.
+Local-time morning, day, evening, and night states remain inside one luminous family. Morning is fresh cool mist over a pale warm centre; day is the clearest neutral state; evening introduces restrained lavender-grey and peach-mineral warmth; night bottoms out at medium-light pearl blue (`#AEBCC0`, `#C8CFCC`, `#C9BEB5`) rather than returning to charcoal. Seasonal drift is secondary and never overrides minimum visibility. No location, weather, partner state, or network input is used.
 
 The pebble gesture has screen-reader buttons with long-press transfer and tap-to-touch alternatives. Empty state is announced. Reduced motion, scalable typography, visible functional contrast, Safe Area layout, and a 2D fallback remain mandatory.
 
 ## Renderer and Expo GL boundary
 
-One React Three Fiber native Canvas uses Expo GL, basic shadow maps, ACES tone mapping, sRGB output, exposure `1.12`, and pixel ratio capped at `1.35` (`1.0` in low-quality diagnostics). Three.js is pinned to r182 because current R3F 9.6.1 still constructs `Clock`; r183+ reports that internal dependency as deprecated. `npm ls` must resolve one deduplicated Three instance.
+One React Three Fiber native Canvas uses Expo GL, basic shadow maps, ACES tone mapping, sRGB output, exposure `1.22`, and pixel ratio capped at `1.35` (`1.0` in low-quality diagnostics). Three.js is pinned to r182 because current R3F 9.6.1 still constructs `Clock`; r183+ reports that internal dependency as deprecated. `npm ls` must resolve one deduplicated Three instance.
 
 Expo GL does not implement every browser WebGL `pixelStorei` enum that Three calls while resetting renderer state. Pebble configures no textures and does not monkey-patch console or GL. Harmless initialization messages for unsupported reset-only enums may remain until Expo GL implements them; `UNPACK_FLIP_Y_WEBGL` and `UNPACK_ALIGNMENT` are supported. This limitation must never be hidden or mistaken for a missing-material failure.
 
@@ -89,7 +90,7 @@ The earlier Pebble repository contributed procedural deformation, deterministic 
 
 ## Fallback and Bowl Lab
 
-The responsive 2D fallback uses the same six roles, zero-through-six layouts, 74% centred bowl, bright-dark palette, tactile shadows, hold/cancel/departure behavior, and empty-state hierarchy. It is a product surface, not an unrelated placeholder.
+The responsive 2D fallback uses the same six roles, zero-through-six layouts, centred bowl, luminous palette, tactile shadows, hold/cancel/departure behavior, and empty-state hierarchy. It is a product surface, not an unrelated placeholder.
 
 The development-only Bowl Lab is opened from Settings → Development; no ADB command is required. A full-width preview uses about 42% of portrait height with a 300-point minimum. A separate scrolling workbench groups pebble count, motion, lighting/season, collapsible renderer diagnostics and metrics, typography/accessibility, and connection inspection. Metrics no longer cover the bowl.
 
@@ -97,7 +98,15 @@ The Lab exposes counts zero through six, all identities, initial three, all six,
 
 The optional development data inspector calls a member-only aggregate RPC. It shows pair/model status and active, caller-held, elsewhere-held, and retired counts without partner identity. It cannot write ownership or bypass RLS, and production navigation cannot expose the Lab.
 
-The GL shader draws its atmosphere directly across clip space, the renderer clear color matches the environment edge, and React Native/fallback layers use the same environment values. Loading and GL readiness therefore remain one continuous bright-dark surface without a black video-frame boundary.
+The GL shader draws the luminous upper/centre/lower atmosphere directly across clip space, the renderer clear color matches the environment edge, and React Native/fallback layers use the same values. Loading and GL readiness therefore remain one continuous mineral surface without a black video-frame boundary.
+
+## Navigation and connection ritual
+
+All authenticated routes share one Pebble navigation shell. Bowl and Pairing display a small Pebble wordmark and an explicit localized Settings action; Settings and its subpages display a back action with a deterministic Bowl/Pairing fallback and a compact home shortcut. Native Expo Router headers are disabled so custom and system navigation never compete. Every target is at least 48 logical pixels, and development builds reserve top-right clearance for the unrelated Expo Dev Client tool button.
+
+Pairing is a three-state ritual rather than a simultaneous form dashboard. The initial state shows one real bowl and only the create-invitation action plus a secondary join choice. The waiting state keeps the hero mounted, introduces a second real procedural bowl through a restrained opacity/depth transition, and prioritizes the selectable invitation, Copy, and Share; the alternate join form stays collapsed. The joining state presents one labeled keyboard-safe field, Join, and Cancel. Content moves only 12 pixels over 270 ms and becomes a direct crossfade when reduced motion is enabled.
+
+Navigation and functional controls remain flat. Primary actions use muted sage, secondary actions use pearl/mineral borders, and inputs use light mineral surfaces with explicit focus state. Material relief belongs only to the physical bowl and pebbles.
 
 ## Physical-device acceptance
 
@@ -107,4 +116,4 @@ Permanent rules:
 
 > Neumorphism belongs to the physical objects, never to the application chrome.
 
-> Darkness may frame the objects, but it may never hide them.
+> Light, material, and proportion create premium quality; darkness does not.

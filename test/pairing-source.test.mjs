@@ -22,9 +22,9 @@ test('pairing UI does not generate or hash invitation tokens locally', () => {
 });
 
 test('invitation creator observes only membership completion before entering the bowl',()=>{
-  assert.match(pairingScreen,/table:'pair_members'/);
-  assert.match(pairingScreen,/count:'exact'/);
-  assert.match(pairingScreen,/if\(\(count\?\?0\)>=2\)onPaired\(\)/);
+  assert.match(pairingScreen,/table: 'pair_members'/);
+  assert.match(pairingScreen,/count: 'exact'/);
+  assert.match(pairingScreen,/if \(\(count \?\? 0\) >= 2\) onPaired\(\)/);
 });
 
 test('invitation migration stores token hashes and not plaintext tokens', () => {

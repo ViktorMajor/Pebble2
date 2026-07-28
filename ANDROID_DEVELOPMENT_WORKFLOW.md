@@ -53,7 +53,7 @@ The launcher derives the IPv4 source address of the laptop's default route, expo
 
 Open Pebble on the phone and select or scan the development server shown by Metro. Changing Wi-Fi/LAN IP does **not** require a new EAS APK.
 
-In development builds, Bowl Lab is available inside Pebble at **Settings → Development → Open Bowl Lab**. It does not require ADB. The floating gear, ellipsis, mute, or moon controls that Expo may draw over the app belong to Expo Dev Client, not Pebble. They can be disabled with Expo Dev Client's **Tools button** setting, and they are absent from production builds. Pebble layout should not compensate for those temporary external controls.
+In development builds, Bowl Lab is available inside Pebble at **Settings → Development → Open Bowl Lab**. It does not require ADB. Pebble now has its own labeled **Settings / Beállítások** control on both Bowl and Pairing; that is the product navigation. The floating gear, ellipsis, mute, or moon controls that Expo may draw over the app belong to Expo Dev Client, not Pebble. They can be disabled in the development client through **Settings → Tools button**, and they are absent from production builds. Development layout reserves clearance so the external tool button does not cover Pebble's Settings action.
 
 ## Initial local environment setup
 
@@ -106,3 +106,5 @@ After that APK is installed, changing Wi-Fi, local Supabase data, TypeScript, bo
 The Bright Dark Bowl / six-pebble refinement adds no native dependency or native configuration. The installed Premium Bowl development APK can load it through Metro; the Three.js version alignment is JavaScript-only.
 
 The full-screen measured Bowl layout and structured Bowl Lab are also JavaScript/TypeScript changes. They use the native modules already present in that installed development APK, so no new EAS build is required.
+
+The Luminous Pebble navigation, materials, pairing states, and environmental palette are likewise JavaScript/TypeScript-only. Test them in the already installed SDK 57 development build with `npm run dev:phone`; do not create a new EAS build for this milestone.

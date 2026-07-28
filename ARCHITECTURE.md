@@ -12,7 +12,8 @@ Pebble is an Expo SDK 57 / React Native application using strict TypeScript, Exp
 - `app/(app)/bowl/[id].tsx`: immutable past connection bowl.
 - `app/(app)/bowl-lab.tsx`: development-only visual harness; redirects outside `__DEV__`. Its optional connection inspector reads one member-authorized aggregate RPC and never mutates Supabase or returns partner identity.
 - `src/features/bowl/`: finite held-state service, deterministic layouts, procedural geometry, native renderer, 2D fallback, environmental light, and interaction state.
-- `src/design/`: graphite/mineral design tokens and the Source Serif 4 / Source Sans 3 font loader.
+- `src/design/`: centralized Luminous Mineral environment/component tokens, shared controls, and the Source Serif 4 / Source Sans 3 font loader.
+- `src/features/navigation/`: the single authenticated Pebble chrome, route-aware header, fallback routing, and restrained navigation motion.
 - `src/i18n/`: persisted English/Hungarian localization.
 - `src/features/pairing/`: client connection queries and secure invitation RPC calls.
 - `src/features/notifications/`, `sound/`, `widget/`: restrained peripheral feedback.
@@ -23,6 +24,8 @@ The Shore presentation and its bounded accumulated-history renderer were removed
 ## Session and navigation gate
 
 `AppSessionProvider` owns one Supabase session subscription and one active-connection lookup. No route redirects until both are resolved. Unauthenticated users reach Auth; authenticated users with a complete active connection reach Bowl; authenticated users without a connection or with a one-member waiting connection reach Pairing. This prevents an unprovisioned invitation from masquerading as an empty bowl. Every unresolved and recoverable failure state renders a full-screen loading or localized retry surface.
+
+The authenticated route group uses one `AppChrome` around a headerless Expo Router stack. Root Bowl and Pairing routes expose Pebble's own explicit localized Settings action. Settings and subpages expose back navigation with a deterministic Bowl/Pairing fallback plus a compact home shortcut. This prevents duplicate headers and keeps Pebble navigation distinct from Expo Dev Client controls. Pairing maintains one mounted hero across `initial`, `waiting`, and `joining` presentation states; Supabase invitation and Realtime behavior remain in the existing service boundary.
 
 ## Connection domain
 
@@ -46,7 +49,7 @@ React Three Fiber's native canvas uses Expo GL—no WebView or DOM layer. `BowlS
 
 The development diagnostics RPC returns only connection/model status, member count, active/held/elsewhere/retired aggregates, and the caller's pair ID after verifying membership. It exposes no partner identifier or profile data. Production UI never invokes it. A complete six-pebble connection with zero held rows is a legitimate empty bowl; a one-member connection is waiting and unprovisioned; `legacy-six-migration-required` remains a distinct blocked migration state.
 
-Procedural identities combine persisted seeds with a stable six-role `visual_variant` for guaranteed differentiation in flattening, proportions, dents, asymmetry, value, and material response. `getBowlEnvironment(date)` continuously interpolates local-time light and subtle calendar-season variation inside a readable bright-dark range, with no location, weather, network, or relationship input.
+Procedural identities combine persisted seeds with a stable six-role `visual_variant` for guaranteed differentiation in flattening, proportions, dents, asymmetry, value, and material response. `getBowlEnvironment(date)` continuously interpolates local-time light and subtle calendar-season variation inside a readable Luminous Mineral range, with no location, weather, network, or relationship input. Pairing reuses the same measured renderer with one or two actual bowl meshes; it never substitutes an outlined placeholder.
 
 ## Typography, localization, sound, and notifications
 

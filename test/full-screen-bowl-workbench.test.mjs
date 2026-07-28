@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const scene = read('src/features/bowl/BowlScene.tsx');
 const composition = read('src/features/bowl/bowlComposition.ts');
 const screen = read('src/features/bowl/BowlScreen.tsx');
+const header = read('src/features/navigation/AppHeader.tsx');
 const lab = read('src/features/bowl/BowlLabScreen.tsx');
 const settings = read('src/features/settings/SettingsScreen.tsx');
 const labRoute = read('app/(app)/bowl-lab.tsx');
@@ -45,11 +46,11 @@ test('GL and React Native atmosphere form one seamless measured surface', () => 
   assert.doesNotMatch(scene, /style=\{styles\.canvas\}[\s\S]*flex: 1/);
 });
 
-test('ordinary Bowl is a full-size layered composition with an independent settings control', () => {
+test('ordinary Bowl is a full-size layered composition with a shared settings control', () => {
   assert.match(screen, /scene:\{width:'100%',alignSelf:'stretch',flex:1/);
   assert.match(screen, /empty:\{position:'absolute'.*top:'12%'/);
-  assert.match(screen, /accessibilityLabel=\{t\('app\.settings'\)\}/);
-  assert.match(screen, /settings:\{position:'absolute'/);
+  assert.match(header, /label=\{t\('app\.settings'\)\}/);
+  assert.match(header, /router\.push\('\/\(app\)\/settings'\)/);
   assert.doesNotMatch(screen, /previewPebbles\?\?\[|fakePebbles|seeds\.slice/);
 });
 
