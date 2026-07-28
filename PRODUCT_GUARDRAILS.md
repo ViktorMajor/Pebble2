@@ -12,4 +12,4 @@ If `PRODUCT_INVARIANTS.md` changes, update the corresponding rule list in `test/
 
 New reusable user-facing copy belongs in `src/content/` so the vocabulary check covers it. Product-specific UI strings should be moved there when that UI is next materially changed.
 
-Phase 17 source tests additionally assert that the UI exposes no numerical inventory, partner-bowl comparison, user-facing Shore vocabulary, badge count, or response prompt.
+Phase 18 source and database tests additionally assert the permanent six-pebble invariant, 3–3 provisioning, safe legacy retirement, no numerical inventory, no partner-bowl comparison, no user-facing Shore vocabulary, no badge count, no response prompt, and no full-interface neumorphism.

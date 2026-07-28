@@ -4,7 +4,7 @@
 
 Either current member can permanently end an active connection without the other member's approval. Ending it invalidates invitations and blocks new transfers, touches, and push delivery. Membership, the finite pebble identity set, and transfer history remain readable only to legitimate members as a static past connection. It cannot be reopened or edited.
 
-A person may retain multiple past connections but may belong to at most one active connection. After ending one, they may begin another without deleting old history. Each completed new connection receives its own finite persistent pebble set.
+A person may retain multiple past connections but may belong to at most one active connection. After ending one, they may begin another without deleting old history. Each completed new connection receives its own permanent six-pebble set, initially distributed three and three.
 
 ## Delete an account
 

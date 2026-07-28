@@ -100,3 +100,5 @@ npx eas-cli@latest build --platform android --profile development
 ```
 
 After that APK is installed, changing Wi-Fi, local Supabase data, TypeScript, bowl geometry, layouts, colors, light, animation, copy, or other JavaScript does not require another EAS build. Use the normal `npm run dev:phone` loop.
+
+The Bright Dark Bowl / six-pebble refinement adds no native dependency or native configuration. The installed Premium Bowl development APK can load it through Metro; the Three.js version alignment is JavaScript-only.

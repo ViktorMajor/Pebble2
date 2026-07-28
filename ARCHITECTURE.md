@@ -28,9 +28,9 @@ The Shore presentation and its bounded accumulated-history renderer were removed
 
 A person may retain many ended connections but may belong to at most one active connection. Database triggers serialize membership changes and enforce the two-person maximum and one-active-connection rule. Invitations are server-generated, hash-only at rest, expiring, single-use, rate-limited, and consumed atomically.
 
-Each completed connection owns exactly `private.total_pair_pebbles()` stable rows in `public.pair_pebbles` (provisionally eight). Four begin with the creator and four with the joining member. `id`, `pair_id`, `visual_seed`, and `created_at` are immutable. Direct client writes are revoked; RLS exposes only identities currently held by the caller, so a member cannot query the partner's bowl.
+Each completed connection owns exactly `private.total_pair_pebbles()` active stable rows in `public.pair_pebbles`; the permanent value is six. Three begin with the creator and three with the joining member. `id`, `pair_id`, `visual_seed`, `visual_variant`, and `created_at` are immutable. Direct client writes are revoked; RLS exposes only active identities currently held by the caller, so a member cannot query the partner's bowl.
 
-`public.pebbles` remains the immutable transfer/touch event history. This avoids corrupting existing events or inventing identities for past actions. Existing two-member local connections receive a new eight-identity baseline during the forward migration; legacy event rows remain intact with a null identity reference.
+`public.pebbles` remains the immutable transfer/touch event history. Phase 18 safely reduces Phase 17 development sets by retiring two deterministically chosen identities that have no transfer history, preferring one per current holder. Retired identities remain service-role-auditable but are absent from RLS, Bowl state, and transfer selection. If fewer than two untouched provisional identities exist, the connection is marked `legacy-six-migration-required` and transfers are blocked instead of rewriting history. A deferred active-set trigger requires exactly six non-retired holders for every normal completed active connection.
 
 ## Transfer and touch
 
@@ -42,9 +42,9 @@ Each completed connection owns exactly `private.total_pair_pebbles()` stable row
 
 ## Native bowl presentation
 
-React Three Fiber's native canvas uses Expo GL—no WebView or DOM layer. One demand-driven renderer contains the bowl, all held pebbles, lights, and contact grounding. Pixel ratio is capped at 1.5. Geometry complexity is bounded, layouts for zero through eight are fixed, and resources/timers are disposed on teardown. The route pauses naturally when no invalidation occurs. GL initialization/render errors fall back to a 2D bowl with the same state and interaction semantics.
+React Three Fiber's native canvas uses Expo GL—no WebView or DOM layer. One demand-driven renderer contains the bowl, all held pebbles, lights, and contact grounding. Pixel ratio is capped at 1.35, or 1 in the low-quality lab mode. Camera distance is calculated from the measured Canvas aspect ratio and bowl diameter to hold a 74% projected width with at least 24 logical pixels of side clearance. Geometry complexity is bounded, layouts for zero through six are fixed, and resources/timers are disposed on teardown. Active interaction explicitly invalidates frames; a resting scene stops requesting them. GL initialization/render errors fall back to a responsive 2D bowl with the same state and interaction semantics.
 
-Procedural identities use persisted seeds for stable flattening, proportions, dents, asymmetry, color, and material response. `getBowlEnvironment(date)` continuously interpolates local-time light and subtle calendar-season variation with no location, weather, network, or relationship input.
+Procedural identities combine persisted seeds with a stable six-role `visual_variant` for guaranteed differentiation in flattening, proportions, dents, asymmetry, value, and material response. `getBowlEnvironment(date)` continuously interpolates local-time light and subtle calendar-season variation inside a readable bright-dark range, with no location, weather, network, or relationship input.
 
 ## Typography, localization, sound, and notifications
 

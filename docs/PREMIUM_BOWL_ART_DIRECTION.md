@@ -1,49 +1,100 @@
 # Premium Bowl Art Direction
 
-## Product metaphor
+## Six circulating objects
 
-Pebble is a private connection between exactly two people. Each person normally sees only their own bowl. A connection owns one finite set of eight persistent pebbles; the same physical identities travel between bowls. The partner's current bowl is deliberately not displayed, because side-by-side inventories would turn presence into accounting.
+Pebble is a private connection between exactly two people. A completed connection permanently owns exactly six physical-feeling pebble identities. Three begin with the creator and three with the joining member. They are created once, never regenerated, never reset, and never duplicated or destroyed while the connection is active. Sending transfers one specific identity; touching acknowledges its latest arrival without sending it back.
 
-An empty bowl is complete. It is neither missing content nor a prompt for the other person to act. The only caption is “The bowl is empty.” / “A tál most üres.” No count, capacity, debt, activity, or response-time information is shown.
+The user normally sees only their own bowl. The partner's present inventory is private because a comparison would turn presence into accounting. A person may hold any number from zero through six. There is no daily quota, cooldown, replenishment, automatic redistribution, numerical capacity, or debt language.
 
-## Persistent ownership
+Existing Phase 17 development connections are migrated forward without rewriting transfer history. Two untouched provisional identities are retired deterministically, preferring one from each current holder. A retired row remains backend-auditable but cannot be selected, transferred, or returned by Bowl state. If fewer than two untouched identities are available, the connection is marked `legacy-six-migration-required` and transfers stop pending explicit review; the application never fabricates history to force a result.
 
-`public.pair_pebbles` stores stable identity, connection, current holder, visual seed, and integrity timestamps. Its RLS exposes only the caller's currently held identities; even a legitimate member cannot directly query the partner's bowl. `public.pebbles` remains the immutable transfer/touch event table so existing history is not rewritten. Transfers atomically lock and move an identity, create an event, and preserve idempotency. Touch acknowledges only the latest eligible arrival and never transfers it back.
+## Bright dark space
 
-`TOTAL_PAIR_PEBBLES` is isolated in the client and `private.total_pair_pebbles()` is isolated in the database. Both are provisionally eight. Completed new connections begin with four identities held by each member. Existing two-person local connections receive a safe eight-identity baseline; legacy events remain unchanged and unlinked rather than receiving invented identities.
+The scene is a quiet blue-hour interior, not a black showroom. Darkness frames the objects but may never hide them. The centre is softened and lighter than the edge, while the bowl and stones maintain explicit material separation. There is no heavy vignette, pure black, RGB edge glow, wellness beige, decorative room, literal table, or landscape.
 
-## Visual and material language
+Core tokens:
 
-The world is deep graphite with cool blue-grey atmosphere and restrained warm mineral light. The shallow bowl is smoke-grey, matte, slightly asymmetric, and lighter inside. Its empty interior exposes curvature and a quiet tonal center. The scene has no literal room, table, beach, landscape, decorative cards, particles, or reward effects.
+- Background edge `#182126`; centre family `#243137`–`#2B383D`; haze family `#2D3C42`–`#34444A`.
+- Bowl outer `#626B6B`, inner `#7A817D`, rim `#8B918C`.
+- Primary text `#F0ECE4`, secondary `#BFC5C2`, functional `#D9DDDA`, muted `#929B98`.
+- Warm key `#CFC4B8`; cool rim `#BAC5C6`.
 
-Pebbles use seeded icosahedral deformation adapted conceptually from the earlier Pebble repository: deterministic pseudo-random proportion, flattening, broad asymmetry, controlled dents, a softened base, related mineral colors, high roughness, very low clearcoat, and soft contact grounding. The old browser implementation's DOM canvas textures, `window`, `document`, `ResizeObserver`, renderer DOM mounting, pointer media queries, continuous spin/float, skins, patina progression, and relationship telemetry were not reused.
+The warm and cool lights remain low-saturation neutral daylight. Their HSL saturation difference is capped at approximately ten percentage points. Neither may read as orange, cyan, teal, purple, neon, or complementary-color spectacle. Vignette darkening is capped at 12%.
 
-## Composition and motion
+Scene-relative luminance targets are edge `1.00`, centre `1.28`, bowl outer `1.76`, bowl inner `2.02`, and visible pebble face `2.58`. The contact shadow floor is 60% of the adjacent interior value; the rim highlight is capped at 1.25× its local base. These targets are verified as relationships after tone mapping rather than by treating hexadecimal material colors as emitted light.
 
-Counts zero through eight each have a fixed art-directed layout. Slots define position, rotation, scale, layer, and predictable arrival/departure space. There is no rigid-body engine, random settling, free camera, or orbit control.
+## Bowl and six identities
 
-Resting objects are still. Holding lifts one pebble and separates its shadow; cancellation returns it to its slot. Transfer rises and recedes without sparkle. A newly arrived untouched stone receives only a restrained warm edge. Touch returns it to the ordinary material state. Reduced motion removes lift/travel and relies on short state changes.
+The bowl is a shallow hand-formed mineral/ceramic object with high roughness, zero metalness, restrained clearcoat, broad highlights, and a single vertex-colored mesh. A lighter upward-facing interior and readable rim replace overlapping front/back meshes, avoiding z-fighting while keeping the outside medium slate-grey.
+
+Six stable visual roles combine a persisted seed with `visual_variant`: flatter pale mineral-grey, round warm grey, narrow graphite-grey, muted green-grey, softly marked medium-grey, and smaller light slate. Seeded deformation supplies fine individuality; the variant guarantees value and proportion separation. At least three roles are lighter than the bowl interior. The UI never names, ranks, catalogues, values, or assigns rarity to them.
+
+Layouts zero through six are explicit. The initial three form a loose asymmetric triangle with visible bowl material between them. Every slot supplies position, rotation, scale, vertical offset, draw order, arrival origin, departure control point, and departure endpoint. Reduction from eight to six increases negative space, identity recognition, animation clarity, and deterministic test coverage without a physics engine.
+
+## Composition and camera
+
+The renderer measures its real Canvas viewport. A 40-degree vertical perspective camera sits at a 41-degree downward angle. Distance is derived from the 3.84-world-unit bowl diameter and current horizontal field of view, targeting 74% of safe width. The acceptable normal range is 70–78%, never above 80%, with at least 24 logical pixels on each side; the margin constraint wins on exceptionally small viewports.
+
+The camera looks slightly above the bowl so its visual centre settles near 56–60% of usable height. The entire outer contour and rim must remain inside the frustum, clear of relational text, the settings control, and the gesture area. Portrait recalculation, small Android screens, English/Hungarian copy, and font scaling must not clip the object.
+
+## Motion grammar
+
+Resting stones are still. Only low-frequency environmental recalculation may move light; stones never spin, float, bounce, or pulse.
+
+Pickup begins immediately and reaches a clearly lifted state in about 210 ms. The stone rises 0.28 world units, its contact shadow separates, and rotation changes roughly 5–7 degrees. Pointer capture keeps the physical hold stable while the mesh moves. Cancellation uses a strongly damped exponential return to the exact art-directed slot.
+
+Committed departure lasts 820 ms. A quadratic spatial curve preserves identity through lift, slight rotation, acceleration, scene-depth travel, and a late fade. The database transfer begins only after the visible path completes. Arrival lasts 920 ms, enters from depth, stays visible, and eases into the defined slot before a damped final settle. Remaining stones interpolate into their next known layout.
+
+The effective damping uses high exponential decay (`18` pickup, `14` settling), no elastic term, no bounce, and conservative positional thresholds. Reduced motion places objects directly, removes travel and rotation, and keeps transfer/touch semantics intact.
+
+The Canvas remains `frameloop="demand"`. Every active pickup, return, departure, arrival, or layout settle explicitly invalidates the next frame. Once tolerances are reached, invalidation stops. A network request waiting after a completed departure does not keep rendering frames.
 
 ## Typography
 
-Source Serif 4 is the relational voice for rare atmospheric statements, onboarding, and the empty bowl caption. Source Sans 3 is the system voice for navigation, settings, labels, forms, errors, and accessibility-essential controls. Both are distributed under the SIL Open Font License 1.1 and include Hungarian `ő`, `Ő`, `ű`, and `Ű`. The splash remains visible until fonts load, preventing fallback-font flashes.
+Source Serif 4 is the relational voice; Source Sans 3 is the system voice.
 
-## Environmental light
+- Relational Hero: Source Serif 4 Medium, 30 sp standard, responsive 28–34 sp, 1.22–1.30 line height, `-0.1` letter spacing, maximum 86% safe width, centred, primary text color.
+- Relational Secondary: Source Serif 4 Regular, 22 sp, 30 sp line height.
+- Functional Primary: Source Sans 3 Medium, 17 sp, 23 sp line height.
+- Functional Secondary: Source Sans 3 Regular, 15 sp, 21 sp line height.
+- Functional controls retain at least a 44×44 logical target; Pebble uses 48 where practical.
 
-The injected `getBowlEnvironment(date)` function continuously interpolates morning, day, evening, and night palettes from local device time. Calendar day adds only a very small northern-hemisphere seasonal warmth variation. It requests no location, weather, relationship, or network data. Functional foreground colors remain independent design tokens with accessible contrast.
+Primary and secondary essential text exceed WCAG AA against the background edge; Relational Hero exceeds 7:1. Low contrast is never used as shorthand for premium design.
 
-## Sound and notifications
+## Empty bowl
 
-Sound is optional and disabled by default. The Expo Audio lifecycle/preference boundary and send/arrival/touch integration points exist, but no placeholder tones ship. `assets/audio/README.md` defines recording, loudness, trimming, duration, and licensing requirements.
+The empty bowl is complete, warm enough to read, and never a disabled state. The only default caption is “The bowl is empty.” / “A tál most üres.” in Relational Hero. It enters after a 340 ms settle delay over 420 ms, without blur, letter animation, icon, count, second line, CTA, or request for the partner to act.
 
-Push content says only that a pebble arrived. Payloads omit numeric badges, counts, timestamps, activity, and response prompts. The app explicitly avoids setting a badge. Android launchers may display their own neutral notification dot; the application cannot force its appearance or color consistently.
+## Neumorphism boundary
 
-## Accessibility and fallback
+Neumorphism belongs to the physical objects, never to the application chrome. Depth, volume, contact shadow, reflected light, lift, and surface relief may shape the bowl and stones. Buttons, fields, cards, settings, navigation, and general surfaces remain flat and restrained—never embossed, inset, clay-like, glassmorphic, or Bento-styled.
 
-The main control is the pebble itself, with a deliberate hold for transfer and a short tap for an eligible arrival touch. Touch targets, screen-reader labels, localized errors, reduced motion, scalable typography, Android back navigation, and scrollable administrative screens remain required.
+## Environment and accessibility
 
-The native scene uses one React Three Fiber canvas backed by Expo GL, capped at 1.5 device pixel ratio and rendered on demand. Geometry and frame timers are disposed on teardown; Realtime subscriptions stop with the route. A React error boundary and explicit development switch provide a tactile 2D bowl fallback with the same finite composition and interactions, so GL failure cannot create a blank screen.
+Local-time morning, day, evening, and night states remain inside one bright-dark family. Night cannot crush the bowl or pebbles into black. Seasonal drift is secondary and never overrides minimum visibility. No location, weather, partner state, or network input is used.
 
-## Development Bowl Lab
+The pebble gesture has screen-reader buttons with long-press transfer and tap-to-touch alternatives. Empty state is announced. Reduced motion, scalable typography, visible functional contrast, Safe Area layout, and a 2D fallback remain mandatory.
 
-`/(app)/bowl-lab` exists only when `__DEV__` is true and redirects in production. It never reads or writes Supabase. It previews all counts, all stable seeds, four light phases, four seasonal samples, incoming/touched state, send removal, reduced motion, GL fallback, bilingual typography, a small viewport, and large text.
+## Renderer and Expo GL boundary
+
+One React Three Fiber native Canvas uses Expo GL, basic shadow maps, ACES tone mapping, sRGB output, exposure `1.12`, and pixel ratio capped at `1.35` (`1.0` in low-quality diagnostics). Three.js is pinned to r182 because current R3F 9.6.1 still constructs `Clock`; r183+ reports that internal dependency as deprecated. `npm ls` must resolve one deduplicated Three instance.
+
+Expo GL does not implement every browser WebGL `pixelStorei` enum that Three calls while resetting renderer state. Pebble configures no textures and does not monkey-patch console or GL. Harmless initialization messages for unsupported reset-only enums may remain until Expo GL implements them; `UNPACK_FLIP_Y_WEBGL` and `UNPACK_ALIGNMENT` are supported. This limitation must never be hidden or mistaken for a missing-material failure.
+
+The earlier Pebble repository contributed procedural deformation, deterministic variation, restrained rough materials, weighted lighting, contact grounding, and slow motion principles. DOM canvas textures, `window`, `document`, `ResizeObserver`, renderer DOM mounting, browser media queries, continuous spin/float, skins, patina progression, and relationship telemetry were not reused.
+
+## Fallback and Bowl Lab
+
+The responsive 2D fallback uses the same six roles, zero-through-six layouts, 74% centred bowl, bright-dark palette, tactile shadows, hold/cancel/departure behavior, and empty-state hierarchy. It is a product surface, not an unrelated placeholder.
+
+The development-only Bowl Lab never accesses Supabase. It exposes counts zero through six, all identities, initial three, all six, empty, held/cancelled/departure/arrival/touched states, four times, seasons, maximum darkness, reduced motion, low-end quality, GL fallback, wireframe, unlit material, white light, bowl/pebble visibility, axes/camera diagnostics, Safe Area overlay, English/Hungarian, and large type. It reports projected width, side margin, bounds, camera distance, exposure, light intensities, frame activity, Canvas count, and active animation.
+
+## Physical-device acceptance
+
+Automated tests and Android export cannot certify visual success. A physical Android pass must confirm the entire bowl contour, horizontal centring, three visible distinct initial stones, restrained light temperature, perceptible pickup/cancel/departure/arrival, complete empty state, readable relational text, stable GL/fallback behavior, one renderer after repeated navigation, and no rapid thermal increase.
+
+Permanent rules:
+
+> Neumorphism belongs to the physical objects, never to the application chrome.
+
+> Darkness may frame the objects, but it may never hide them.

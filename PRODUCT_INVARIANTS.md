@@ -34,8 +34,12 @@ P15. There must be no social feed or public profile system.
 
 P16. Silence must never be interpreted by the application as relationship failure.
 
-P17. A completed connection owns one finite persistent set of pebbles; sending transfers an existing identity between holders and never creates a new identity.
+P17. A completed connection permanently owns exactly six persistent pebbles, initially distributed three and three; sending transfers an existing identity and never creates or destroys one.
 
 P18. Each person normally sees only their own bowl. Pebble never compares the two current inventories.
 
 P19. An empty bowl is a complete state and never an engagement prompt.
+
+P20. The six pebbles circulate continuously. There is no quota, cooldown, regeneration, reset, or automatic redistribution.
+
+P21. Darkness may frame the objects, but it may never hide them.
