@@ -5,7 +5,9 @@ import { colors, MIN_TOUCH_TARGET, spacing, typography } from '../../design/toke
 import { useAppSession } from '../app/AppSessionProvider';
 import { BowlScene, type BowlAnimationCommand, type BowlDiagnosticOptions, type BowlSceneMetrics } from './BowlScene';
 import { getBowlEnvironment } from './bowlEnvironment';
+import { assignPebblesToLayout } from './bowlLayouts';
 import { getBowlDevelopmentDiagnostics, type BowlDevelopmentDiagnostics } from './bowlService';
+import { getMicroNormalTextureCacheMetrics, MICRO_NORMAL_TEXTURE_BYTES, pebbleMaterial } from './proceduralPebble';
 import { TOTAL_PAIR_PEBBLES, type HeldPebble } from './bowlTypes';
 
 const seeds = [112358, 271828, 314159, 161803, 141421, 173205];
@@ -92,6 +94,12 @@ export function BowlLabScreen() {
   const [whiteLight, setWhiteLight] = useState(false);
   const [cameraHelper, setCameraHelper] = useState(false);
   const [lowQuality, setLowQuality] = useState(false);
+  const [materialExpanded, setMaterialExpanded] = useState(false);
+  const [materialMode, setMaterialMode] = useState<'current' | 'flat'>('current');
+  const [disableMicroNormal, setDisableMicroNormal] = useState(false);
+  const [disableEdgeReflection, setDisableEdgeReflection] = useState(false);
+  const [contactShadowMode, setContactShadowMode] = useState<'both' | 'core' | 'penumbra' | 'none'>('both');
+  const [selectedIdentity, setSelectedIdentity] = useState(0);
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
   const [metricsExpanded, setMetricsExpanded] = useState(false);
   const [command, setCommand] = useState<BowlAnimationCommand>({ mode: 'rest', nonce: 0 });
@@ -106,7 +114,10 @@ export function BowlLabScreen() {
   })), [count, incoming, touched]);
   const baseEnvironment = getBowlEnvironment(new Date(2026, month, 15, phase));
   const environment = maximumDarkness ? { ...baseEnvironment, backgroundEdge: '#A6B3B6', backgroundCenter: '#BEC6C4', backgroundHaze: '#C1B6AE', textPrimary: '#26302E', keyIntensity: 0.95, rimIntensity: 0.22 } : baseEnvironment;
-  const diagnostics = useMemo<BowlDiagnosticOptions>(() => ({ wireframe, unlit, hideBowl, hidePebbles, fixedWhiteLight: whiteLight, cameraHelper, lowQuality }), [cameraHelper, hideBowl, hidePebbles, lowQuality, unlit, whiteLight, wireframe]);
+  const diagnostics = useMemo<BowlDiagnosticOptions>(() => ({ wireframe, unlit, hideBowl, hidePebbles, fixedWhiteLight: whiteLight, cameraHelper, lowQuality, materialMode, disableMicroNormal, disableEdgeReflection, contactShadowMode }), [cameraHelper, contactShadowMode, disableEdgeReflection, disableMicroNormal, hideBowl, hidePebbles, lowQuality, materialMode, unlit, whiteLight, wireframe]);
+  const selectedMaterial = useMemo(() => pebbleMaterial(seeds[selectedIdentity], selectedIdentity), [selectedIdentity]);
+  const selectedAssignment = useMemo(() => assignPebblesToLayout(pebbles).find(({ pebble }) => pebble.visualVariant === selectedIdentity), [pebbles, selectedIdentity]);
+  const textureCache = getMicroNormalTextureCacheMetrics();
   const animate = (mode: BowlAnimationCommand['mode']) => setCommand((current) => ({ mode, nonce: current.nonce + 1 }));
 
   return <SafeAreaView edges={['left', 'right']} style={styles.safe}>
@@ -132,12 +143,44 @@ export function BowlLabScreen() {
       <Text style={styles.groupLabel}>Time</Text><View style={styles.wrap}>{[[7, 'Morning'], [12, 'Day'], [18, 'Evening'], [23, 'Night']].map(([value, label]) => <Chip key={label} label={String(label)} active={phase === value} onPress={() => setPhase(Number(value))} />)}<Chip label="Maximum dark" active={maximumDarkness} onPress={() => setMaximumDarkness((value) => !value)} /></View>
       <Text style={styles.groupLabel}>Season</Text><View style={styles.wrap}>{[[0, 'Winter'], [3, 'Spring'], [6, 'Summer'], [9, 'Autumn']].map(([value, label]) => <Chip key={label} label={String(label)} active={month === value} onPress={() => setMonth(Number(value))} />)}</View>
 
+      <SectionHeading>Object material inspection</SectionHeading>
+      <Disclosure label={`Identity ${selectedIdentity + 1} · ${materialMode === 'current' ? 'mineral' : 'flat'}`} expanded={materialExpanded} onPress={() => setMaterialExpanded((value) => !value)} />
+      {materialExpanded ? <View style={styles.materialPanel}>
+        <Text style={styles.groupLabel}>Selected pebble identity</Text>
+        <View style={styles.wrap}>{seeds.map((_seed, identity) => <Chip key={identity} label={String(identity + 1)} active={selectedIdentity === identity} onPress={() => setSelectedIdentity(identity)} />)}</View>
+        <Text style={styles.groupLabel}>Material</Text>
+        <View style={styles.wrap}>
+          <Chip label="Current material" active={materialMode === 'current'} onPress={() => setMaterialMode('current')} />
+          <Chip label="Flat color" active={materialMode === 'flat'} onPress={() => setMaterialMode('flat')} />
+          <Chip label="No micro-normal" active={disableMicroNormal} onPress={() => setDisableMicroNormal((value) => !value)} />
+          <Chip label="No edge reflection" active={disableEdgeReflection} onPress={() => setDisableEdgeReflection((value) => !value)} />
+          <Chip label="Neutral white light" active={whiteLight} onPress={() => setWhiteLight((value) => !value)} />
+        </View>
+        <Text style={styles.groupLabel}>Contact shadows</Text>
+        <View style={styles.wrap}>
+          <Chip label="Current shadows" active={contactShadowMode === 'both'} onPress={() => setContactShadowMode('both')} />
+          <Chip label="Contact core only" active={contactShadowMode === 'core'} onPress={() => setContactShadowMode('core')} />
+          <Chip label="Penumbra only" active={contactShadowMode === 'penumbra'} onPress={() => setContactShadowMode('penumbra')} />
+          <Chip label="Hide contact shadows" active={contactShadowMode === 'none'} onPress={() => setContactShadowMode('none')} />
+        </View>
+        <View style={styles.metricsPanel}>
+          <Metric label="Identity / seed" value={`${selectedIdentity + 1} / ${seeds[selectedIdentity]}`} />
+          <Metric label="Roughness / clearcoat" value={`${selectedMaterial.roughness.toFixed(3)} / ${selectedMaterial.clearcoat.toFixed(3)}`} />
+          <Metric label="Micro texture" value={`${selectedMaterial.microSurfaceScale.toFixed(2)}× · ${selectedMaterial.microSurfaceAmplitude.toFixed(3)}`} />
+          <Metric label="Luminance" value={selectedMaterial.luminance.toFixed(4)} />
+          <Metric label="Current slot / Y" value={selectedAssignment ? `${selectedAssignment.slotIndex + 1} / ${selectedAssignment.slot.position[1].toFixed(3)}` : 'not held in preview'} />
+          <Metric label="Shadow core radius" value={`${selectedMaterial.shadowCoreScale[0].toFixed(3)} × ${selectedMaterial.shadowCoreScale[1].toFixed(3)}`} />
+          <Metric label="Shadow penumbra radius" value={`${selectedMaterial.shadowPenumbraScale[0].toFixed(3)} × ${selectedMaterial.shadowPenumbraScale[1].toFixed(3)}`} />
+          <Metric label="Texture cache" value={`${textureCache.entries} entries · ${textureCache.references} refs · ${Math.round(textureCache.estimatedBytes / 1024)} KiB`} />
+          <Metric label="Texture allocation" value={`${MICRO_NORMAL_TEXTURE_BYTES / 1024} KiB / identity`} />
+        </View>
+      </View> : null}
+
       <SectionHeading>Renderer diagnostics</SectionHeading>
       <Disclosure label="Diagnostic controls" expanded={diagnosticsExpanded} onPress={() => setDiagnosticsExpanded((value) => !value)} />
       {diagnosticsExpanded ? <View style={styles.wrap}>
         <Chip label="Wireframe" active={wireframe} onPress={() => setWireframe((value) => !value)} />
         <Chip label="Unlit" active={unlit} onPress={() => setUnlit((value) => !value)} />
-        <Chip label="White light" active={whiteLight} onPress={() => setWhiteLight((value) => !value)} />
         <Chip label="Hide bowl" active={hideBowl} onPress={() => setHideBowl((value) => !value)} />
         <Chip label="Hide pebbles" active={hidePebbles} onPress={() => setHidePebbles((value) => !value)} />
         <Chip label="Camera / axes" active={cameraHelper} onPress={() => setCameraHelper((value) => !value)} />
@@ -204,6 +247,7 @@ const styles = StyleSheet.create({
   disclosureText: { ...typography.functionalSecondary, color: colors.textFunctional },
   disclosureArrow: { ...typography.functionalPrimary, color: colors.textSubdued },
   metricsPanel: { paddingVertical: spacing.sm },
+  materialPanel: { paddingBottom: spacing.sm },
   metricRow: { minHeight: 28, flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   metricLabel: { fontFamily: typography.functionalSecondary.fontFamily, color: colors.textMuted, fontSize: 13 },
   metricValue: { flexShrink: 1, fontFamily: typography.functionalSecondary.fontFamily, color: colors.textFunctional, fontSize: 13, textAlign: 'right' },

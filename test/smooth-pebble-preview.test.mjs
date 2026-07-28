@@ -27,7 +27,7 @@ test('pairing preview shares PebbleVisual but has no domain interaction', () => 
   assert.match(scene, /composition === 'pairing-single'[\s\S]*<PairingPreviewStones/);
   assert.match(scene, /composition === 'pairing-two'[\s\S]*<PairingPreviewStones[\s\S]*<SecondaryBowl/);
   assert.equal((scene.match(/<PairingPreviewStones/g) ?? []).length, 2);
-  assert.match(scene, /composition === 'bowl' \? sortedPebbles\.map/);
+  assert.match(scene, /composition === 'bowl' \? assignments\.map/);
   assert.doesNotMatch([hero, preview].join('\n'), /from ['"].*(supabase|bowlService|useHeldPebbles)/i);
 });
 

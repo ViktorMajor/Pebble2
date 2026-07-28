@@ -2,13 +2,13 @@ import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { colors, motion } from '../../design/tokens';
-import { getBowlLayout } from './bowlLayouts';
+import { assignPebblesToLayout } from './bowlLayouts';
 import type { BowlEnvironment } from './bowlEnvironment';
 import type { PreviewPebbleSpec } from './pairingPreview';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 
 type Props = { pebbles: HeldPebble[]; previewPebbles?: readonly PreviewPebbleSpec[]; environment: BowlEnvironment; composition?: 'bowl' | 'pairing-single' | 'pairing-two'; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
-const FALLBACK_COLORS = ['#C8C2B5', '#8FA097', '#AA9588', '#7F8B89', '#D0CCC1', '#68716F'];
+const FALLBACK_COLORS = ['#9B9285', '#718078', '#8E6F61', '#596766', '#A18D70', '#4E5958'];
 const PREVIEW_POSITIONS = [
   { left: '39%', top: '45%', rotate: '-8deg' },
   { left: '61%', top: '45%', rotate: '7deg' },
@@ -22,7 +22,7 @@ export function BowlFallback({ pebbles, previewPebbles = [], environment, compos
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sceneWidth, setSceneWidth] = useState(360);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); travel.stopAnimation(); }, [travel]);
-  const layout = getBowlLayout(pebbles.length);
+  const assignments = useMemo(() => assignPebblesToLayout(pebbles), [pebbles]);
   const bowlWidth = Math.min(sceneWidth * 0.74, sceneWidth - 48);
   const bowlHeight = bowlWidth * 0.52;
   const begin = (pebble: HeldPebble) => {
@@ -63,8 +63,7 @@ export function BowlFallback({ pebbles, previewPebbles = [], environment, compos
     <View style={[styles.bowl, composition !== 'bowl' && styles.pairingBowl, { width: bowlWidth, height: bowlHeight, marginLeft: -bowlWidth / 2, marginTop: -bowlHeight * 0.42 }]}>
       <View style={styles.backRim} />
       <View style={styles.inside} />
-      {pebbles.map((pebble, index) => {
-        const item = layout[index]; if (!item) return null;
+      {assignments.map(({ pebble, slot: item }) => {
         const isBusy = busyId === pebble.id;
         return <Animated.View key={pebble.id} style={[styles.pebbleWrap, {
           left: `${50 + item.position[0] * 25}%`,
@@ -72,7 +71,8 @@ export function BowlFallback({ pebbles, previewPebbles = [], environment, compos
           transform: [{ scale: item.scale }, { rotate: `${item.rotation[2]}rad` }, ...(isBusy ? selectedTransform.transform : [])],
           opacity: isBusy ? selectedTransform.opacity : 1,
         }]}>
-          <View style={styles.contactShadow} />
+          <View style={styles.contactPenumbra} />
+          <View style={styles.contactCore} />
           <Pressable accessibilityRole="button" onPressIn={() => begin(pebble)} onPressOut={() => end(pebble)} style={[styles.pebble, {
             backgroundColor: pebble.incoming && !pebble.touched ? '#B9AFA3' : FALLBACK_COLORS[pebble.visualVariant] ?? FALLBACK_COLORS[0],
           }]} />
@@ -82,7 +82,8 @@ export function BowlFallback({ pebbles, previewPebbles = [], environment, compos
         const placement = PREVIEW_POSITIONS[index];
         if (!placement) return null;
         return <View key={pebble.previewKey} style={[styles.previewPebbleWrap, { left: placement.left, top: placement.top, transform: [{ rotate: placement.rotate }] }]}>
-          <View style={styles.previewContactShadow} />
+          <View style={styles.previewPenumbra} />
+          <View style={styles.previewCore} />
           <View style={[styles.previewPebble, { backgroundColor: FALLBACK_COLORS[pebble.visualVariant] ?? FALLBACK_COLORS[0] }]} />
         </View>;
       })}</View> : null}
@@ -98,13 +99,15 @@ const styles = StyleSheet.create({
   bowl: { position: 'absolute', left: '50%', top: '58%' },
   pairingBowl: { transform: [{ scale: 0.84 }] },
   secondBowl: { position: 'absolute', right: '6%', top: '54%', opacity: 0.62 },
-  backRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 15, borderColor: colors.bowlRim, backgroundColor: colors.bowlInside },
-  inside: { position: 'absolute', left: '8%', right: '8%', top: '15%', bottom: '19%', borderRadius: 999, backgroundColor: colors.bowlInside },
-  frontRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 15, borderTopColor: 'transparent', borderLeftColor: colors.bowlOutside, borderRightColor: colors.bowlOutside, borderBottomColor: '#8B8F89' },
+  backRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 17, borderColor: '#C5C1B5', backgroundColor: '#96988F' },
+  inside: { position: 'absolute', left: '9%', right: '9%', top: '15%', bottom: '22%', borderRadius: 999, backgroundColor: '#96988F' },
+  frontRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 17, borderTopColor: 'transparent', borderLeftColor: '#8F928B', borderRightColor: '#8F928B', borderBottomColor: '#858A83' },
   pebbleWrap: { position: 'absolute', marginLeft: -30, marginTop: -21, width: 60, height: 46 },
-  contactShadow: { position: 'absolute', left: 3, right: 3, bottom: -7, height: 19, borderRadius: 20, backgroundColor: colors.contact, opacity: 0.25 },
-  pebble: { width: 60, height: 43, borderRadius: 30, borderWidth: 1, borderColor: '#DDD9CF', shadowColor: colors.contact, shadowOpacity: 0.22, shadowRadius: 8, elevation: 4 },
+  contactPenumbra: { position: 'absolute', left: 1, right: 1, bottom: -7, height: 17, borderRadius: 20, backgroundColor: '#817D74', opacity: 0.07 },
+  contactCore: { position: 'absolute', left: 11, right: 11, bottom: -3, height: 8, borderRadius: 12, backgroundColor: '#77746C', opacity: 0.17 },
+  pebble: { width: 60, height: 43, borderRadius: 30, borderWidth: StyleSheet.hairlineWidth, borderColor: '#AEA99F', shadowColor: colors.contact, shadowOpacity: 0.16, shadowRadius: 6, elevation: 3 },
   previewPebbleWrap: { position: 'absolute', marginLeft: -22, marginTop: -15, width: 44, height: 32 },
-  previewContactShadow: { position: 'absolute', left: 4, right: 4, bottom: -5, height: 12, borderRadius: 18, backgroundColor: colors.contact, opacity: 0.13 },
-  previewPebble: { width: 44, height: 30, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDD9CF' },
+  previewPenumbra: { position: 'absolute', left: 2, right: 2, bottom: -5, height: 11, borderRadius: 18, backgroundColor: '#817D74', opacity: 0.06 },
+  previewCore: { position: 'absolute', left: 10, right: 10, bottom: -2, height: 5, borderRadius: 10, backgroundColor: '#77746C', opacity: 0.16 },
+  previewPebble: { width: 44, height: 30, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: '#AEA99F' },
 });
