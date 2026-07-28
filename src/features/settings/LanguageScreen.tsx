@@ -1,4 +1,5 @@
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { type LanguagePreference, useI18n } from '../../i18n';
 export function LanguageScreen() { const { preference, setPreference, t } = useI18n(); const choices: { value: LanguagePreference; label: string }[] = [{ value:'system',label:t('language.system') },{ value:'en',label:t('language.english') },{ value:'hu',label:t('language.hungarian') }]; return <SafeAreaView style={styles.safe}><View style={styles.content}>{choices.map((choice) => <Pressable key={choice.value} accessibilityRole="radio" accessibilityState={{ selected: preference === choice.value }} onPress={() => void setPreference(choice.value)} style={styles.row}><Text style={styles.label}>{choice.label}</Text><Text style={styles.selected}>{preference === choice.value ? '✓' : ''}</Text></Pressable>)}</View></SafeAreaView>; }
 const styles=StyleSheet.create({safe:{flex:1,backgroundColor:'#F7F3EC'},content:{padding:28},row:{minHeight:58,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:'#E0D7CA'},label:{color:'#403931',fontSize:17},selected:{color:'#4F6A5F',fontSize:20,fontWeight:'700'}});

@@ -2,7 +2,8 @@ import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Link } from 'expo-router';
-import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HoldPebble } from './HoldPebble';
 import { PebbleStone } from './PebbleStone';

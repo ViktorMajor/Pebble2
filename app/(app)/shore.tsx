@@ -1,7 +1,6 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
 import { ShoreScreen } from '../../src/features/shore/ShoreScreen';
-import { useAuthSession } from '../../src/features/auth/useAuthSession';
-import { useCurrentShore } from '../../src/features/pairing/useCurrentShore';
-export default function ShoreRoute() { const { session } = useAuthSession(); const shore = useCurrentShore(Boolean(session)); if (shore.isLoading) return <SafeAreaView style={styles.loading}><ActivityIndicator /></SafeAreaView>; if (!session) return <Redirect href="/(auth)" />; if (!shore.pairId) return <Redirect href="/(app)/pairing" />; return <ShoreScreen currentUserId={session.user.id} pairId={shore.pairId} shoreStatus="active" />; }
-const styles = StyleSheet.create({ loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F3EC' } });
+import { useAppSession } from '../../src/features/app/AppSessionProvider';
+import { AppLoadingScreen, AppRetryScreen } from '../../src/features/app/AppStateScreen';
+import { useI18n } from '../../src/i18n';
+export default function ShoreRoute() { const appSession = useAppSession(); const { t } = useI18n(); if (appSession.isLoading) return <AppLoadingScreen />; if (appSession.shoreErrorText) return <AppRetryScreen message={t('app.shoreError')} onRetry={() => void appSession.shoreRefresh()} />; if (!appSession.session) return <Redirect href="/(auth)" />; if (!appSession.shoreId) return <Redirect href="/(app)/pairing" />; return <ShoreScreen currentUserId={appSession.session.user.id} pairId={appSession.shoreId} shoreStatus="active" />; }

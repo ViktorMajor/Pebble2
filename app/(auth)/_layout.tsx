@@ -1,5 +1,4 @@
 import { Redirect, Stack } from 'expo-router';
-import { ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
-import { useAuthSession } from '../../src/features/auth/useAuthSession';
-export default function AuthLayout() { const { session, isLoading } = useAuthSession(); if (isLoading) return <SafeAreaView style={styles.loading}><ActivityIndicator /></SafeAreaView>; if (session) return <Redirect href="/(app)/shore" />; return <Stack screenOptions={{ headerShown: false }} />; }
-const styles = StyleSheet.create({ loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F3EC' } });
+import { useAppSession } from '../../src/features/app/AppSessionProvider';
+import { AppLoadingScreen, AppRetryScreen } from '../../src/features/app/AppStateScreen';
+export default function AuthLayout() { const appSession = useAppSession(); if (appSession.isLoading) return <AppLoadingScreen />; if (appSession.authErrorText) return <AppRetryScreen message={appSession.authErrorText} onRetry={() => void appSession.refresh()} />; if (appSession.session) return <Redirect href={appSession.shoreId ? '/(app)/shore' : '/(app)/pairing'} />; return <Stack screenOptions={{ headerShown: false }} />; }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { deletePebbleAccount } from '../lifecycle/lifecycleService';
 import { requireSupabaseClient } from '../../lib/supabase';

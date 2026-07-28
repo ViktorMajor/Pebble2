@@ -1,5 +1,5 @@
 export const hu = {
-  app: { name: 'Pebble', loading: 'A Pebble betöltése', retry: 'Próbáld újra', settings: 'Beállítások', notConfigured: 'A Pebble nincs beállítva ezen az eszközön.', continue: 'Tovább', skip: 'Kihagyás' },
+  app: { name: 'Pebble', loading: 'A Pebble betöltése', retry: 'Próbáld újra', shoreError: 'A part betöltése nem sikerült.', settings: 'Beállítások', notConfigured: 'A Pebble nincs beállítva ezen az eszközön.', continue: 'Tovább', skip: 'Kihagyás' },
   onboarding: { first: 'Küldj egy kavicsot, amikor eszedbe jut valaki.', second: 'Egy érkező kavics megérintése csak azt jelenti, hogy megérkezett.', third: 'Egy kavics nem igényel választ. A csendnek is van helye.' },
   auth: {
     signIn: 'Belépés', createProfile: 'Profil létrehozása', access: 'Lépj be a privát partodhoz.',

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
 import * as Notifications from 'expo-notifications';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useI18n } from '../../i18n';
 
 function Row({ href, title, detail }: { href: '/(app)/settings/profile' | '/(app)/settings/language' | '/(app)/settings/connection' | '/(app)/settings/account'; title: string; detail?: string }) { return <Link href={href} style={styles.row}><Text style={styles.rowTitle}>{title}</Text>{detail ? <Text style={styles.detail}>{detail}</Text> : null}</Link>; }

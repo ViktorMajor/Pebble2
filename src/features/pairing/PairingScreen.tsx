@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
-import { ActivityIndicator, Pressable, SafeAreaView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useI18n } from '../../i18n';
 

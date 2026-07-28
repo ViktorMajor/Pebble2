@@ -15,11 +15,11 @@ test('sessions persist securely and root routing selects an authenticated route 
   assert.match(supabaseClient, /persistSession: true/);
   assert.match(supabaseClient, /storage: AsyncStorage/);
   assert.match(appRoute, /Redirect href="\/\(auth\)"/);
-  assert.match(appRoute, /shore\.pairId \? '\/\(app\)\/shore' : '\/\(app\)\/pairing'/);
+  assert.match(appRoute, /appSession\.shoreId \? '\/\(app\)\/shore' : '\/\(app\)\/pairing'/);
 });
 
 test('release flows keep authenticated routing and duplicate-send safeguards', () => {
-  assert.match(shoreRoute, /useCurrentShore/);
+  assert.match(shoreRoute, /useAppSession/);
   assert.match(holdPebble, /const sending = useRef\(false\)/);
   assert.match(holdPebble, /disabled=\{isSending\}/);
   assert.match(shoreScreen, /requestPebblePushDelivery\(sentPebble\.id\)\.catch/);

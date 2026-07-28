@@ -3,15 +3,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { getCurrentShore, type CurrentShore } from './pairingService';
 
-export function useCurrentShore(isAuthenticated: boolean) {
-  const [isLoading, setIsLoading] = useState(isAuthenticated && isSupabaseConfigured);
+export function useCurrentShore(userId: string | null) {
+  const [isLoading, setIsLoading] = useState(Boolean(userId) && isSupabaseConfigured);
   const [shore, setShore] = useState<CurrentShore | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!isAuthenticated || !isSupabaseConfigured) {
+    if (!userId || !isSupabaseConfigured) {
       setIsLoading(false);
       setShore(null);
+      setResolvedUserId(null);
       return;
     }
 
@@ -24,8 +26,9 @@ export function useCurrentShore(isAuthenticated: boolean) {
       setErrorText('Could not load shore.');
     } finally {
       setIsLoading(false);
+      setResolvedUserId(userId);
     }
-  }, [isAuthenticated]);
+  }, [userId]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -69,7 +72,7 @@ export function useCurrentShore(isAuthenticated: boolean) {
 
   return {
     errorText,
-    isLoading,
+    isLoading: Boolean(userId) && (isLoading || resolvedUserId !== userId),
     pairId: shore?.id ?? null,
     status: shore?.status ?? null,
     refresh,

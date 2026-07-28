@@ -1,5 +1,5 @@
 export const en = {
-  app: { name: 'Pebble', loading: 'Loading Pebble', retry: 'Try again', settings: 'Settings', notConfigured: 'Pebble is not configured on this device.', continue: 'Continue', skip: 'Skip' },
+  app: { name: 'Pebble', loading: 'Loading Pebble', retry: 'Try again', shoreError: 'Could not load your shore.', settings: 'Settings', notConfigured: 'Pebble is not configured on this device.', continue: 'Continue', skip: 'Skip' },
   onboarding: { first: 'Send a pebble when someone crosses your mind.', second: 'Touching a received pebble simply means it reached you.', third: 'A pebble does not require a reply. Silence is allowed.' },
   auth: {
     signIn: 'Sign in', createProfile: 'Create profile', access: 'Sign in to your private shore.',
