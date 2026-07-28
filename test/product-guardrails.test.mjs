@@ -4,6 +4,7 @@ import { basename, extname } from 'node:path';
 import { test } from 'node:test';
 
 const forbiddenPebbleColumns = ['message', 'content', 'caption', 'emoji', 'reaction', 'read_at', 'seen_at', 'touched_at'];
+const forbiddenIdentityColumns = [...forbiddenPebbleColumns, 'name', 'rarity', 'value', 'price', 'skin'];
 const prohibitedVocabulary = ['streak', 'score', 'last seen', 'last online', 'active now', 'response time', 'relationship score'];
 const suspiciousFeatureNames = ['ChatScreen', 'MessageComposer', 'ReactionPicker', 'Leaderboard', 'EngagementDashboard', 'RelationshipScore'];
 
@@ -28,6 +29,14 @@ test('pebbles schema cannot acquire authored, reaction, or read-tracking columns
   for (const column of forbiddenPebbleColumns) {
     assert.doesNotMatch(pebblesDefinition[1], new RegExp(`\\b${column}\\b`, 'i'));
   }
+
+  const identityMigration = readFileSync(
+    migrationFiles.find((file) => file.pathname.endsWith('20260728100000_phase_17_finite_pair_pebbles.sql')),
+    'utf8',
+  );
+  const identitiesDefinition = identityMigration.match(/create table public\.pair_pebbles \(([\s\S]*?)\n\);/);
+  assert.ok(identitiesDefinition, 'Expected the public.pair_pebbles identity definition.');
+  for (const column of forbiddenIdentityColumns) assert.doesNotMatch(identitiesDefinition[1], new RegExp(`\\b${column}\\b`, 'i'));
 
   const laterMigrations = migrationFiles
     .filter((file) => !file.pathname.endsWith('20260727090000_phase_2_base_schema.sql'))

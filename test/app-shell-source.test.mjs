@@ -13,7 +13,7 @@ const migration = read('supabase/migrations/20260727120000_phase_16_app_shell_co
 
 test('app shell separates auth and authenticated routes', () => {
   assert.match(routes, /\(auth\)/);
-  assert.match(routes, /\(app\)\/shore/);
+  assert.match(routes, /\(app\)\/bowl/);
   assert.match(read('app/(app)/settings/index.tsx'), /SettingsScreen/);
 });
 
@@ -33,9 +33,9 @@ test('profile validation and updates use the existing owner-scoped profile table
 });
 
 test('connection management preserves history and creates no partner replacement workflow', () => {
-  assert.match(connection, /closedShores/);
+  assert.match(connection, /pastConnections/);
   assert.match(connection, /beginNew/);
-  assert.doesNotMatch(connection, /replace partner|change partner|transfer shore/i);
+  assert.doesNotMatch(connection, /replace partner|change partner|transfer connection/i);
   assert.match(migration, /User already has an active shore/);
   assert.match(migration, /pg_advisory_xact_lock/);
 });

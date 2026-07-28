@@ -27,8 +27,11 @@ test('push delivery happens in a protected server function', () => {
   assert.match(deliveryFunction, /pebble\.sender_id !== userData\.user\.id/);
   assert.match(deliveryFunction, /pebble_push_deliveries/);
   assert.match(deliveryFunction, /pair\.status !== 'active'/);
+  assert.match(deliveryFunction, /latestEvent\?\.id !== body\.pebbleId/);
+  assert.match(deliveryFunction, /identity\?\.current_holder_id !== recipientMembership\.user_id/);
   assert.match(deliveryFunction, /https:\/\/exp\.host\/--\/api\/v2\/push\/send/);
-  assert.match(deliveryFunction, /sent you a pebble\./);
+  assert.match(deliveryFunction, /A pebble arrived\./);
+  assert.doesNotMatch(deliveryFunction, /badge\s*:/);
   assert.doesNotMatch(tokenService, /SERVICE_ROLE|EXPO_PUSH|exp\.host/);
 });
 

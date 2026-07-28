@@ -1,30 +1,3 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { test } from 'node:test';
-
-const sendService = readFileSync(new URL('../src/features/shore/sendPebbleService.ts', import.meta.url), 'utf8');
-const holdPebble = readFileSync(new URL('../src/features/shore/HoldPebble.tsx', import.meta.url), 'utf8');
-const migration = readFileSync(
-  new URL('../supabase/migrations/20260727100000_phase_4_real_pebble_sending.sql', import.meta.url),
-  'utf8',
-);
-
-test('client sends pebbles through server-controlled RPC only', () => {
-  assert.match(sendService, /rpc\('send_pebble'/);
-  assert.doesNotMatch(sendService, /\.from\('pebbles'\)\.insert/);
-  assert.doesNotMatch(sendService, /sender_id/);
-});
-
-test('hold interaction sends before departure animation', () => {
-  assert.match(holdPebble, /onSend\(\)\s*\n\s*\.then\(animateDeparture\)/);
-  assert.doesNotMatch(holdPebble, /onPress=\{.*send/i);
-});
-
-test('database send operation protects sender and duplicate behavior', () => {
-  assert.match(migration, /revoke insert on public\.pebbles from authenticated/);
-  assert.match(migration, /current_user_id uuid := auth\.uid\(\)/);
-  assert.match(migration, /insert into public\.pebbles \(pair_id, sender_id\)/);
-  assert.match(migration, /unique \(user_id, request_key\)/);
-  assert.match(migration, /interval '2 seconds'/);
-  assert.doesNotMatch(migration, /\bmessage\b|\bcontent\b|\bmetadata\b|\bcaption\b|\bemoji\b|\breaction\b/);
-});
+import assert from 'node:assert/strict';import{readFileSync}from'node:fs';import{test}from'node:test';const read=(p)=>readFileSync(new URL(`../${p}`,import.meta.url),'utf8');const service=read('src/features/bowl/bowlService.ts');const scene=read('src/features/bowl/BowlScene.tsx');const migration=read('supabase/migrations/20260728100000_phase_17_finite_pair_pebbles.sql');
+test('client transfers the pressed stable identity through the secure RPC',()=>{assert.match(service,/rpc\('send_pebble'/);assert.match(service,/selected_pair_pebble_id: pairPebbleId/);assert.doesNotMatch(service,/\.from\('pebbles'\)\.insert/);assert.match(scene,/HOLD_DURATION_MS/);assert.match(scene,/onPointerDown/);assert.match(scene,/onPointerUp/);});
+test('database transfer is owned, atomic, and idempotent',()=>{assert.match(migration,/current_holder_id = current_user_id/);assert.match(migration,/set current_holder_id = partner_user_id/);assert.match(migration,/insert into public\.pebbles \(pair_id, pair_pebble_id, sender_id\)/);assert.match(migration,/existing_request\.pair_pebble_id/);assert.match(migration,/current_user_id uuid := auth\.uid\(\)/);assert.doesNotMatch(migration,/\bmessage\b|\bcaption\b|\bemoji\b|\breaction\b/);});

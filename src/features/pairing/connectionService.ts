@@ -1,0 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requireSupabaseClient } from '../../lib/supabase';
+
+const inviteKey = (pairId: string) => `pebble.invite.${pairId}`;
+export type ConnectionInvite = { pairId: string; inviteToken: string; expiresAt: string };
+export type ActiveConnection = { id: string; status: 'active' };
+export type PastConnection = { id: string; closedAt: string };
+export type ConnectionSummary = { id: string; status: 'active'|'closed'; closedAt:string|null; partnerName:string|null; hasPendingInvite:boolean };
+
+export async function createConnectionWithInvite():Promise<ConnectionInvite>{const client=requireSupabaseClient();const{data,error}=await client.rpc('create_shore_with_invite');if(error)throw error;const invite=data?.[0];if(!invite)throw new Error('Connection could not be created.');const result={pairId:invite.pair_id,inviteToken:invite.invite_token,expiresAt:invite.expires_at};await AsyncStorage.setItem(inviteKey(result.pairId),result.inviteToken);return result;}
+export async function joinConnectionWithInvite(inviteToken:string){const{data,error}=await requireSupabaseClient().rpc('join_shore_with_invite',{invite_token:inviteToken.trim()});if(error)throw error;const result=data?.[0];if(!result)throw new Error('Invitation unavailable.');return result.pair_id as string;}
+export async function getLocalInvitation(pairId:string){return AsyncStorage.getItem(inviteKey(pairId));}
+export async function getActiveConnection():Promise<ActiveConnection|null>{const{data,error}=await requireSupabaseClient().from('pairs').select('id,status').eq('status','active').order('created_at',{ascending:false}).limit(1).maybeSingle();if(error)throw error;return data?.status==='active'?{id:data.id,status:'active'}:null;}
+export async function getConnections(currentUserId:string):Promise<{active:ConnectionSummary|null;past:PastConnection[]}>{const client=requireSupabaseClient();const{data:pairs,error}=await client.from('pairs').select('id,status,closed_at').order('created_at',{ascending:false});if(error)throw error;const activePair=pairs?.find((pair)=>pair.status==='active')??null;const past=(pairs??[]).filter((pair)=>pair.status==='closed').map((pair)=>({id:pair.id,closedAt:pair.closed_at??''}));if(!activePair)return{active:null,past};const{data:members,error:memberError}=await client.from('pair_members').select('user_id,profiles(display_name)').eq('pair_id',activePair.id);if(memberError)throw memberError;const partner=(members??[]).find((member)=>member.user_id!==currentUserId) as {profiles?:{display_name?:string}|null}|undefined;return{active:{id:activePair.id,status:'active',closedAt:null,partnerName:partner?.profiles?.display_name??null,hasPendingInvite:(members?.length??0)<2},past};}
+export async function getConnectionStatus(pairId:string):Promise<'active'|'closed'|null>{const{data,error}=await requireSupabaseClient().from('pairs').select('status').eq('id',pairId).maybeSingle();if(error)throw error;return data?.status==='active'||data?.status==='closed'?data.status:null;}

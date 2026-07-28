@@ -1,33 +1,3 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { test } from 'node:test';
-
-const supabaseClient = readFileSync(new URL('../src/lib/supabase.ts', import.meta.url), 'utf8');
-const appRoute = readFileSync(new URL('../app/index.tsx', import.meta.url), 'utf8');
-const shoreRoute = readFileSync(new URL('../app/(app)/shore.tsx', import.meta.url), 'utf8');
-const holdPebble = readFileSync(new URL('../src/features/shore/HoldPebble.tsx', import.meta.url), 'utf8');
-const sendService = readFileSync(new URL('../src/features/shore/sendPebbleService.ts', import.meta.url), 'utf8');
-const shoreScreen = readFileSync(new URL('../src/features/shore/ShoreScreen.tsx', import.meta.url), 'utf8');
-const authService = readFileSync(new URL('../src/features/auth/authService.ts', import.meta.url), 'utf8');
-
-test('sessions persist securely and root routing selects an authenticated route group', () => {
-  assert.match(supabaseClient, /@react-native-async-storage\/async-storage/);
-  assert.match(supabaseClient, /persistSession: true/);
-  assert.match(supabaseClient, /storage: AsyncStorage/);
-  assert.match(appRoute, /Redirect href="\/\(auth\)"/);
-  assert.match(appRoute, /appSession\.shoreId \? '\/\(app\)\/shore' : '\/\(app\)\/pairing'/);
-});
-
-test('release flows keep authenticated routing and duplicate-send safeguards', () => {
-  assert.match(shoreRoute, /useAppSession/);
-  assert.match(holdPebble, /const sending = useRef\(false\)/);
-  assert.match(holdPebble, /disabled=\{isSending\}/);
-  assert.match(shoreScreen, /requestPebblePushDelivery\(sentPebble\.id\)\.catch/);
-});
-
-test('profile setup and request idempotency avoid client-side trust and weak randomness', () => {
-  assert.match(authService, /data:\s*\{\s*display_name:/s);
-  assert.doesNotMatch(authService, /from\('profiles'\)/);
-  assert.match(sendService, /getRandomValues/);
-  assert.doesNotMatch(sendService, /Math\.random/);
-});
+import assert from'node:assert/strict';import{readFileSync}from'node:fs';import{test}from'node:test';const read=(p)=>readFileSync(new URL(`../${p}`,import.meta.url),'utf8');const supabase=read('src/lib/supabase.ts');const root=read('app/index.tsx');const route=read('app/(app)/bowl.tsx');const scene=read('src/features/bowl/BowlScene.tsx');const key=read('src/features/bowl/requestKey.ts');
+test('sessions persist and root routing selects bowl or pairing',()=>{assert.match(supabase,/persistSession: true/);assert.match(supabase,/storage: AsyncStorage/);assert.match(root,/connectionId \? '\/\(app\)\/bowl'/);assert.match(route,/useAppSession/);});
+test('transfer guards and secure request randomness remain',()=>{assert.match(scene,/busy\.current/);assert.match(scene,/disabled\|\|busy\.current/);assert.match(key,/getRandomValues/);assert.doesNotMatch(key,/Math\.random/);});

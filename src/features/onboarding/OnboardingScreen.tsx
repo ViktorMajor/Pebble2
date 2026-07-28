@@ -2,13 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, fonts, MIN_TOUCH_TARGET, spacing } from '../../design/tokens';
 import { useI18n } from '../../i18n';
+import { BowlScene } from '../bowl/BowlScene';
+import { useBowlEnvironment } from '../bowl/bowlEnvironment';
+import type { HeldPebble } from '../bowl/bowlTypes';
+import { useReducedMotion } from '../bowl/useReducedMotion';
 
-export const ONBOARDING_KEY = 'pebble.onboarding-complete';
-export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
-  const { t } = useI18n(); const [step, setStep] = useState(0);
-  const copy = [t('onboarding.first'), t('onboarding.second'), t('onboarding.third')];
-  const complete = async () => { await AsyncStorage.setItem(ONBOARDING_KEY, 'true'); onComplete(); };
-  return <SafeAreaView style={styles.safe}><View style={styles.content}><Text style={styles.name}>{t('app.name')}</Text><Text style={styles.copy}>{copy[step]}</Text><View style={styles.actions}><Pressable accessibilityRole="button" onPress={() => void complete()} style={styles.skip}><Text style={styles.skipText}>{t('app.skip')}</Text></Pressable><Pressable accessibilityRole="button" onPress={() => step === copy.length - 1 ? void complete() : setStep(step + 1)} style={styles.continue}><Text style={styles.continueText}>{t('app.continue')}</Text></Pressable></View></View></SafeAreaView>;
-}
-const styles=StyleSheet.create({safe:{flex:1,backgroundColor:'#F7F3EC'},content:{flex:1,justifyContent:'center',padding:28,gap:30},name:{color:'#403931',fontSize:22,fontWeight:'600'},copy:{color:'#675D52',fontSize:28,lineHeight:38},actions:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},skip:{minHeight:48,justifyContent:'center',paddingHorizontal:8},skipText:{color:'#675D52',fontSize:15},continue:{minHeight:52,minWidth:120,alignItems:'center',justifyContent:'center',borderRadius:26,backgroundColor:'#4F6A5F',paddingHorizontal:18},continueText:{color:'#F7F3EC',fontWeight:'600',fontSize:16}});
+export const ONBOARDING_KEY='pebble.onboarding-complete';
+const preview:HeldPebble[]=[{id:'preview-1',visualSeed:112358,transferEventId:null,incoming:false,touched:true},{id:'preview-2',visualSeed:271828,transferEventId:null,incoming:false,touched:true},{id:'preview-3',visualSeed:314159,transferEventId:null,incoming:false,touched:true}];
+export function OnboardingScreen({onComplete}:{onComplete:()=>void}){const{t}=useI18n();const[step,setStep]=useState(0);const environment=useBowlEnvironment();const reducedMotion=useReducedMotion();const copy=[t('onboarding.first'),t('onboarding.second'),t('onboarding.third')];const complete=async()=>{await AsyncStorage.setItem(ONBOARDING_KEY,'true');onComplete();};return<SafeAreaView style={[styles.safe,{backgroundColor:environment.background}]}><View style={styles.scene}><BowlScene pebbles={step===2?[]:preview.slice(0,step===0?1:3)} environment={environment} disabled reducedMotion={reducedMotion} onSend={async()=>{}} onTouch={async()=>{}}/></View><View style={styles.copyArea}><Text style={styles.copy}>{copy[step]}</Text><View style={styles.progress}>{copy.map((_,index)=><View key={index} style={[styles.dot,index===step&&styles.dotActive]}/>)}</View><View style={styles.actions}><Pressable accessibilityRole="button" onPress={()=>void complete()} style={styles.control}><Text style={styles.quiet}>{t('app.skip')}</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>step===2?void complete():setStep(step+1)} style={styles.control}><Text style={styles.next}>{t('app.continue')}</Text></Pressable></View></View></SafeAreaView>;}
+const styles=StyleSheet.create({safe:{flex:1},scene:{flex:1,minHeight:360},copyArea:{minHeight:240,paddingHorizontal:spacing.xl,paddingBottom:spacing.lg},copy:{fontFamily:fonts.relational,fontSize:27,lineHeight:36,color:colors.textPrimary,textAlign:'center'},progress:{height:36,flexDirection:'row',justifyContent:'center',alignItems:'center',gap:8},dot:{width:4,height:4,borderRadius:2,backgroundColor:colors.border},dotActive:{backgroundColor:colors.textSubdued},actions:{flexDirection:'row',justifyContent:'space-between'},control:{minHeight:MIN_TOUCH_TARGET,justifyContent:'center',paddingHorizontal:spacing.sm},quiet:{fontFamily:fonts.system,color:colors.textSubdued,fontSize:15},next:{fontFamily:fonts.systemMedium,color:colors.textPrimary,fontSize:15}});

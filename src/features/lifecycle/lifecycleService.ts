@@ -1,6 +1,6 @@
 import { requireSupabaseClient } from '../../lib/supabase';
 
-export async function closeShore(pairId: string): Promise<void> {
+export async function closeConnection(pairId: string): Promise<void> {
   const client = requireSupabaseClient();
   const { error } = await client.rpc('close_shore', { target_pair_id: pairId });
 

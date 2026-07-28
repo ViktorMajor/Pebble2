@@ -6,14 +6,19 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#171B20"
+    },
     "ios": {
       "bundleIdentifier": "io.github.viktormajor.pebble",
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#171B20",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -26,7 +31,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#A28B73",
+          "defaultChannel": "pebbles"
+        }
+      ],
       [
         "expo-widgets",
         {
@@ -34,7 +46,7 @@
             {
               "name": "PebbleWidget",
               "displayName": "Pebble",
-              "description": "A quiet presence from your shore.",
+              "description": "A quiet view of your bowl.",
               "ios": {
                 "supportedFamilies": [
                   "systemSmall",
@@ -45,7 +57,26 @@
           ]
         }
       ],
-      "expo-localization"
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": ["en", "hu"],
+            "android": ["en", "hu"]
+          }
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "expo-splash-screen"
     ],
     "extra": {
       "router": {},

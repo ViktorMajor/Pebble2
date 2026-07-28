@@ -14,7 +14,7 @@ export default function IndexRoute() {
   if (onboarding === null || appSession.isLoading) return <AppLoadingScreen />;
   if (!onboarding) return <OnboardingScreen onComplete={() => setOnboarding(true)} />;
   if (appSession.authErrorText) return <AppRetryScreen message={appSession.authErrorText} onRetry={() => void appSession.refresh()} />;
-  if (appSession.shoreErrorText) return <AppRetryScreen message={t('app.shoreError')} onRetry={() => void appSession.shoreRefresh()} />;
+  if (appSession.connectionErrorText) return <AppRetryScreen message={t('app.connectionError')} onRetry={() => void appSession.connectionRefresh()} />;
   if (!appSession.session) return <Redirect href="/(auth)" />;
-  return <Redirect href={appSession.shoreId ? '/(app)/shore' : '/(app)/pairing'} />;
+  return <Redirect href={appSession.connectionId ? '/(app)/bowl' : '/(app)/pairing'} />;
 }

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { signInWithEmail, signUpWithProfile } from './authService';
 import { useI18n } from '../../i18n';
+import { colors, fonts } from '../../design/tokens';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
@@ -63,7 +64,7 @@ export function AuthScreen() {
               maxLength={80}
               onChangeText={setDisplayName}
               placeholder={t('auth.displayName')}
-              placeholderTextColor="#988C7E"
+              placeholderTextColor="#747B80"
               style={styles.input}
               value={displayName}
             />
@@ -78,7 +79,7 @@ export function AuthScreen() {
             returnKeyType="next"
             onChangeText={setEmail}
             placeholder={t('auth.email')}
-            placeholderTextColor="#988C7E"
+            placeholderTextColor="#747B80"
             style={styles.input}
             value={email}
           />
@@ -89,7 +90,7 @@ export function AuthScreen() {
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             onChangeText={setPassword}
             placeholder={t('auth.password')}
-            placeholderTextColor="#988C7E"
+            placeholderTextColor="#747B80"
             secureTextEntry
             returnKeyType="done"
             onSubmitEditing={() => void submit()}
@@ -109,7 +110,7 @@ export function AuthScreen() {
             style={[styles.primaryButton, !canSubmit && styles.disabledButton]}
           >
             {isPending ? (
-              <ActivityIndicator color="#F7F3EC" />
+              <ActivityIndicator color={colors.textPrimary} />
             ) : (
               <Text style={styles.primaryButtonText}>{isSignUp ? t('auth.createAccount') : t('auth.signIn')}</Text>
             )}
@@ -133,7 +134,7 @@ export function AuthScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F3EC',
+    backgroundColor: colors.atmosphere,
   },
   container: {
     flexGrow: 1,
@@ -145,12 +146,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: '#403931',
+    color: colors.textPrimary,
+    fontFamily: fonts.systemSemibold,
     fontSize: 22,
     fontWeight: '600',
   },
   subtitle: {
-    color: '#675D52',
+    color: colors.textPrimary,
+    fontFamily: fonts.relational,
     fontSize: 26,
     lineHeight: 34,
   },
@@ -160,15 +163,17 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 54,
     borderWidth: 1,
-    borderColor: '#D4C8B9',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
-    color: '#403931',
-    backgroundColor: '#FBF8F2',
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+    fontFamily: fonts.system,
     fontSize: 16,
   },
   error: {
-    color: '#8B3F35',
+    color: colors.error,
+    fontFamily: fonts.system,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -177,13 +182,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: '#4F6A5F',
+    backgroundColor: '#5B625F',
   },
   disabledButton: {
     opacity: 0.45,
   },
   primaryButtonText: {
-    color: '#F7F3EC',
+    color: colors.textPrimary,
+    fontFamily: fonts.systemSemibold,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -193,7 +199,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    color: '#675D52',
+    color: colors.textSubdued,
+    fontFamily: fonts.systemMedium,
     fontSize: 14,
     fontWeight: '600',
   },

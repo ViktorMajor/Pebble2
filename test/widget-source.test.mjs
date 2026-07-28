@@ -20,8 +20,9 @@ test('iOS widget is configured as an ambient deep-link surface', () => {
   assert.equal(widgetsPlugin[1].enableAndroid, undefined);
   assert.deepEqual(widgetsPlugin[1].widgets[0].ios.supportedFamilies, ['systemSmall', 'systemMedium']);
   assert.match(widgetSource, /createWidget<PebbleWidgetProps>\('PebbleWidget'/);
-  assert.match(widgetSource, /widgetURL\('pebble:\/\/shore'\)/);
-  assert.match(widgetCopy, /A pebble is waiting/);
+  assert.match(widgetSource, /widgetURL\('pebble:\/\/bowl'\)/);
+  assert.match(widgetCopy, /A pebble arrived/);
+  assert.match(widgetCopy, /Egy kavics érkezett/);
   assert.doesNotMatch(widgetSource, /Button|onPress|sendPebble|rpc\(/);
 });
 

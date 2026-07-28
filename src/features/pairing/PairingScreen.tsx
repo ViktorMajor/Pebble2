@@ -1,208 +1,25 @@
-import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
-import { ActivityIndicator, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { colors, fonts, MIN_TOUCH_TARGET, radii, spacing } from '../../design/tokens';
 import { useI18n } from '../../i18n';
+import { requireSupabaseClient } from '../../lib/supabase';
+import { BowlScene } from '../bowl/BowlScene';
+import { useBowlEnvironment } from '../bowl/bowlEnvironment';
+import { useReducedMotion } from '../bowl/useReducedMotion';
+import { createConnectionWithInvite, joinConnectionWithInvite, type ConnectionInvite } from './connectionService';
 
-import { createShoreWithInvite, joinShoreWithInvite, type ShoreInvite } from './pairingService';
-
-type PairingScreenProps = {
-  onPaired: () => void;
-};
-
-export function PairingScreen({ onPaired }: PairingScreenProps) {
-  const { t } = useI18n();
-  const [inviteToken, setInviteToken] = useState('');
-  const [createdInvite, setCreatedInvite] = useState<ShoreInvite | null>(null);
-  const [errorText, setErrorText] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const createShore = async () => {
-    setIsPending(true);
-    setErrorText(null);
-
-    try {
-      setCreatedInvite(await createShoreWithInvite());
-    } catch {
-      setErrorText(t('pairing.createError'));
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  const joinShore = async () => {
-    if (inviteToken.trim().length === 0) {
-      return;
-    }
-
-    setIsPending(true);
-    setErrorText(null);
-
-    try {
-      await joinShoreWithInvite(inviteToken);
-      onPaired();
-    } catch {
-      setErrorText(t('pairing.joinError'));
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('app.name')}</Text>
-          <Text style={styles.subtitle}>{t('pairing.begin')}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('pairing.create')}</Text>
-          <Pressable
-            accessibilityRole="button"
-            disabled={isPending}
-            onPress={createShore}
-            style={[styles.primaryButton, isPending && styles.disabled]}
-          >
-            {isPending ? <ActivityIndicator color="#F7F3EC" /> : <Text style={styles.primaryText}>{t('pairing.create')}</Text>}
-          </Pressable>
-
-          {createdInvite ? (
-            <View style={styles.inviteBox}>
-              <Text selectable style={styles.inviteToken}>
-                {createdInvite.inviteToken}
-              </Text>
-              <Text style={styles.helper}>{t('pairing.shareOnce')}</Text>
-              <View style={styles.inviteActions}>
-                <Pressable accessibilityRole="button" onPress={() => void Clipboard.setStringAsync(createdInvite.inviteToken).then(() => setCopied(true))}><Text style={styles.link}>{copied ? t('pairing.copied') : t('pairing.copy')}</Text></Pressable>
-                <Pressable accessibilityRole="button" onPress={() => void Share.share({ message: createdInvite.inviteToken })}><Text style={styles.link}>{t('pairing.share')}</Text></Pressable>
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('pairing.join')}</Text>
-          <TextInput
-            accessibilityLabel={t('pairing.invitation')}
-            autoCapitalize="none"
-            onChangeText={setInviteToken}
-            placeholder={t('pairing.invitation')}
-            placeholderTextColor="#988C7E"
-            style={styles.input}
-            value={inviteToken}
-          />
-          <Pressable
-            accessibilityRole="button"
-            disabled={isPending || inviteToken.trim().length === 0}
-            onPress={joinShore}
-            style={[styles.secondaryButton, (isPending || inviteToken.trim().length === 0) && styles.disabled]}
-          >
-            <Text style={styles.secondaryText}>{t('pairing.join')}</Text>
-          </Pressable>
-        </View>
-
-        {errorText ? <Text accessibilityLiveRegion="polite" style={styles.error}>{errorText}</Text> : null}
-      </View>
-    </SafeAreaView>
-  );
+export function PairingScreen({onPaired}:{onPaired:()=>void}){const{t}=useI18n();const environment=useBowlEnvironment();const reducedMotion=useReducedMotion();const[code,setCode]=useState('');const[created,setCreated]=useState<ConnectionInvite|null>(null);const[error,setError]=useState<string|null>(null);const[pending,setPending]=useState(false);const[copied,setCopied]=useState(false);
+  useEffect(()=>{if(!created)return;const client=requireSupabaseClient();const check=async()=>{const{count}=await client.from('pair_members').select('user_id',{count:'exact',head:true}).eq('pair_id',created.pairId);if((count??0)>=2)onPaired();};const channel=client.channel(`connection-join:${created.pairId}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'pair_members',filter:`pair_id=eq.${created.pairId}`},()=>void check()).subscribe((status)=>{if(status==='SUBSCRIBED')void check();});return()=>{void client.removeChannel(channel);};},[created,onPaired]);
+  const create=async()=>{setPending(true);setError(null);try{setCreated(await createConnectionWithInvite());}catch{setError(t('pairing.createError'));}finally{setPending(false);}};
+  const join=async()=>{if(!code.trim()||pending)return;setPending(true);setError(null);try{await joinConnectionWithInvite(code);onPaired();}catch{setError(t('pairing.joinError'));}finally{setPending(false);}};
+  return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <View style={styles.visual}><BowlScene pebbles={[]} environment={environment} disabled reducedMotion={reducedMotion} onSend={async()=>{}} onTouch={async()=>{}}/>{created?<View pointerEvents="none" style={styles.secondBowl}/>:null}</View>
+    <Text style={styles.title}>{t('pairing.begin')}</Text>
+    {created?<View style={styles.invitation}><Text style={styles.relational}>{t('pairing.waiting')}</Text><Text selectable style={styles.code}>{created.inviteToken}</Text><Text style={styles.helper}>{t('pairing.shareOnce')}</Text><View style={styles.actions}><Pressable accessibilityRole="button" onPress={()=>void Clipboard.setStringAsync(created.inviteToken).then(()=>setCopied(true))} style={styles.quietButton}><Text style={styles.link}>{copied?t('pairing.copied'):t('pairing.copy')}</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>void Share.share({message:created.inviteToken})} style={styles.quietButton}><Text style={styles.link}>{t('pairing.share')}</Text></Pressable></View></View>:<Pressable accessibilityRole="button" disabled={pending} onPress={()=>void create()} style={[styles.primary,pending&&styles.disabled]}>{pending?<ActivityIndicator color={colors.textPrimary}/>:<Text style={styles.primaryText}>{t('pairing.create')}</Text>}</Pressable>}
+    <View style={styles.divider}/><Text style={styles.label}>{t('pairing.join')}</Text><TextInput accessibilityLabel={t('pairing.invitation')} autoCapitalize="none" autoCorrect={false} returnKeyType="done" onSubmitEditing={()=>void join()} onChangeText={setCode} placeholder={t('pairing.invitation')} placeholderTextColor="#747B80" selectionColor={colors.warmKey} style={styles.input} value={code}/><Pressable accessibilityRole="button" disabled={pending||!code.trim()} onPress={()=>void join()} style={[styles.secondary,(pending||!code.trim())&&styles.disabled]}><Text style={styles.secondaryText}>{t('pairing.join')}</Text></Pressable>
+    {error?<Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>:null}
+  </ScrollView></SafeAreaView>;
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F3EC',
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 28,
-    paddingHorizontal: 28,
-  },
-  header: {
-    gap: 8,
-  },
-  title: {
-    color: '#403931',
-    fontSize: 22,
-    fontWeight: '600',
-  },
-  subtitle: {
-    color: '#675D52',
-    fontSize: 26,
-    lineHeight: 34,
-  },
-  section: {
-    gap: 12,
-  },
-  sectionTitle: {
-    color: '#4D463F',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  primaryButton: {
-    minHeight: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 27,
-    backgroundColor: '#4F6A5F',
-  },
-  primaryText: {
-    color: '#F7F3EC',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    minHeight: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#CBBEAE',
-    borderRadius: 27,
-    backgroundColor: '#F1E9DE',
-  },
-  secondaryText: {
-    color: '#4D463F',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabled: {
-    opacity: 0.48,
-  },
-  input: {
-    minHeight: 54,
-    borderWidth: 1,
-    borderColor: '#D4C8B9',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    color: '#403931',
-    backgroundColor: '#FBF8F2',
-    fontSize: 16,
-  },
-  inviteBox: {
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#D8CCBE',
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: '#FBF8F2',
-  },
-  inviteToken: {
-    color: '#403931',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  helper: {
-    color: '#776D62',
-    fontSize: 13,
-  },
-  inviteActions: { flexDirection: 'row', gap: 18 },
-  link: { color: '#4F6A5F', fontSize: 14, fontWeight: '600', minHeight: 32 },
-  error: {
-    color: '#8B3F35',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-});
+const styles=StyleSheet.create({safe:{flex:1,backgroundColor:colors.atmosphere},content:{paddingHorizontal:spacing.lg,paddingBottom:spacing.xxl},visual:{height:260,marginHorizontal:-spacing.lg},secondBowl:{position:'absolute',right:'8%',bottom:34,width:92,height:38,borderRadius:999,borderWidth:8,borderColor:'rgba(112,119,121,.26)'},title:{fontFamily:fonts.relational,fontSize:30,lineHeight:38,color:colors.textPrimary,textAlign:'center',marginBottom:spacing.xl},relational:{fontFamily:fonts.relational,fontSize:20,lineHeight:28,color:colors.textPrimary},invitation:{gap:spacing.md},code:{fontFamily:fonts.system,fontSize:13,lineHeight:20,color:colors.textSubdued,padding:spacing.md,borderRadius:radii.input,backgroundColor:colors.surface},helper:{fontFamily:fonts.system,fontSize:14,lineHeight:20,color:colors.textSubdued},actions:{flexDirection:'row',gap:spacing.md},quietButton:{minHeight:MIN_TOUCH_TARGET,justifyContent:'center'},link:{fontFamily:fonts.systemMedium,color:colors.textPrimary,fontSize:15},primary:{minHeight:54,alignItems:'center',justifyContent:'center',borderRadius:radii.control,backgroundColor:'#5B625F'},primaryText:{fontFamily:fonts.systemMedium,color:colors.textPrimary,fontSize:16},divider:{height:1,backgroundColor:colors.border,marginVertical:spacing.xl},label:{fontFamily:fonts.systemMedium,color:colors.textPrimary,fontSize:16,marginBottom:spacing.sm},input:{minHeight:54,borderWidth:1,borderColor:colors.border,borderRadius:radii.input,paddingHorizontal:spacing.md,color:colors.textPrimary,backgroundColor:colors.surface,fontFamily:fonts.system,fontSize:16},secondary:{minHeight:54,marginTop:spacing.sm,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:colors.border,borderRadius:radii.control},secondaryText:{fontFamily:fonts.systemMedium,color:colors.textPrimary,fontSize:16},disabled:{opacity:.42},error:{fontFamily:fonts.system,color:colors.error,fontSize:14,textAlign:'center',marginTop:spacing.md}});
