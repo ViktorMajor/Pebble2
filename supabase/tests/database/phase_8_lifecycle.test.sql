@@ -83,13 +83,13 @@ select results_eq(
 
 select throws_like(
   $$ select * from public.touch_pebble('82000000-0000-4000-8000-000000000002') $$,
-  '%shore is closed%',
+  '%connection is closed%',
   'closed shore rejects new touches'
 );
 
 select throws_like(
   $$ select * from public.send_pebble('alice-closed-lifecycle-request-000001') $$,
-  '%Exactly one active shore%',
+  '%No held pebble is available%',
   'closed shore rejects new sends'
 );
 

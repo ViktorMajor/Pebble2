@@ -15,14 +15,16 @@ values
   ('00000000-0000-4000-8000-0000000000a1', 'authenticated', 'authenticated', 'alice4@example.test', 'test', now(), now(), now()),
   ('00000000-0000-4000-8000-0000000000b2', 'authenticated', 'authenticated', 'bob4@example.test', 'test', now(), now(), now()),
   ('00000000-0000-4000-8000-0000000000c3', 'authenticated', 'authenticated', 'mallory4@example.test', 'test', now(), now(), now()),
-  ('00000000-0000-4000-8000-0000000000d4', 'authenticated', 'authenticated', 'closed4@example.test', 'test', now(), now(), now());
+  ('00000000-0000-4000-8000-0000000000d4', 'authenticated', 'authenticated', 'closed4@example.test', 'test', now(), now(), now()),
+  ('00000000-0000-4000-8000-0000000000e5', 'authenticated', 'authenticated', 'partner4@example.test', 'test', now(), now(), now());
 
 insert into public.profiles (id, display_name)
 values
   ('00000000-0000-4000-8000-0000000000a1', 'Alice'),
   ('00000000-0000-4000-8000-0000000000b2', 'Bob'),
   ('00000000-0000-4000-8000-0000000000c3', 'Mallory'),
-  ('00000000-0000-4000-8000-0000000000d4', 'Closed');
+  ('00000000-0000-4000-8000-0000000000d4', 'Closed'),
+  ('00000000-0000-4000-8000-0000000000e5', 'Partner');
 
 insert into public.pairs (id, status, closed_at)
 values
@@ -34,7 +36,8 @@ insert into public.pair_members (pair_id, user_id)
 values
   ('40000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000a1'),
   ('40000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b2'),
-  ('40000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-0000000000c3');
+  ('40000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-0000000000c3'),
+  ('40000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-0000000000e5');
 
 -- Closed-pair membership is inserted before closure by temporarily reopening the pair.
 update public.pairs
@@ -146,7 +149,7 @@ set local request.jwt.claim.role = 'authenticated';
 
 select throws_like(
   $$ select * from public.send_pebble('closed-request-000000000000001') $$,
-  '%Exactly one active shore is required%',
+  '%No held pebble is available%',
   'closed pair rejects new pebbles'
 );
 
