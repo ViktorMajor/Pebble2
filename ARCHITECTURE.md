@@ -1,82 +1,61 @@
 # Pebble Architecture
 
-Pebble is an Expo and React Native mobile application using TypeScript and Expo Router.
+Pebble is an Expo SDK 57 / React Native application using strict TypeScript, Expo Router, Supabase, and a native GL presentation layer.
 
-## Current Scope
+## Application structure
 
-The current repository contains:
+- `app/`: deterministic authentication/active-connection route gates.
+- `app/(auth)/`: sign-in and profile registration.
+- `app/(app)/bowl.tsx`: primary personal Bowl route.
+- `app/(app)/pairing.tsx`: connection invitation/join ritual.
+- `app/(app)/settings/`: profile, language, connection history, notifications/sounds, and account administration.
+- `app/(app)/bowl/[id].tsx`: immutable past connection bowl.
+- `app/(app)/bowl-lab.tsx`: development-only visual harness; redirects outside `__DEV__` and never touches Supabase.
+- `src/features/bowl/`: finite held-state service, deterministic layouts, procedural geometry, native renderer, 2D fallback, environmental light, and interaction state.
+- `src/design/`: graphite/mineral design tokens and the Source Serif 4 / Source Sans 3 font loader.
+- `src/i18n/`: persisted English/Hungarian localization.
+- `src/features/pairing/`: client connection queries and secure invitation RPC calls.
+- `src/features/notifications/`, `sound/`, `widget/`: restrained peripheral feedback.
+- `supabase/migrations/`, `functions/`, `tests/`: forward-only schema, protected server operations, and pgTAP security tests.
 
-- Expo application configuration
-- Expo Router entry structure
-- strict TypeScript configuration
-- linting
-- basic tests
-- product and engineering documentation
-- minimal Supabase authentication plumbing
-- Supabase migrations for the base private-shore data model
-- secure server-controlled shore pairing
-- server-controlled pebble sending
-- recipient-only, irreversible pebble touching
-- pair-scoped Supabase Realtime synchronization
-- owner-isolated device push token registration and server-side Expo push delivery
-- server-controlled shore closure and account deletion lifecycle
-- bounded spatial shore-memory rendering for long histories
-- local calendar-driven shore environment variation
-- iOS-only ambient widget and targeted product-invariant guardrails
-- RLS/database tests for the base data model
+The Shore presentation and its bounded accumulated-history renderer were removed. Stable database table and RPC names containing `shore` remain only where renaming them would add migration risk; the client presents Connection and Bowl terminology.
 
-Push notifications are opt-in and event-driven only. Pebble does not send inactivity reminders.
+## Session and navigation gate
 
-## Planned Application Structure
+`AppSessionProvider` owns one Supabase session subscription and one active-connection lookup. No route redirects until both are resolved. Unauthenticated users reach Auth; authenticated users with an active connection reach Bowl; authenticated users without one reach Pairing. Every unresolved and recoverable failure state renders a full-screen loading or localized retry surface.
 
-- `app/`: Expo Router routes and layouts.
-- `app/(auth)/`: unauthenticated authentication route group.
-- `app/(app)/`: authenticated Shore, pairing, and settings routes. The Shore remains the default destination; Settings is a secondary stack flow rather than a tab dashboard.
-- `src/i18n/`: persisted English/Hungarian translation resources and locale resolution.
-- `src/features/onboarding/`: a locally persisted, skippable three-step first-use introduction. It establishes Pebble's non-demanding norm before authentication and stores no relationship behaviour.
-- `src/features/auth/`: minimal Supabase authentication UI and helpers.
-- `src/features/pairing/`: shore creation and invitation joining UI backed by RPCs.
-- `src/features/shore/`: send, touch, and pair-scoped realtime shore experience.
-- `src/features/notifications/`: device token registration and native notification lifecycle handling.
-- `src/features/lifecycle/`: close-shore and account-deletion controls.
-- `src/features/widget/`: platform-specific widget snapshot synchronization.
-- `src/content/`: reusable user-facing copy covered by vocabulary guardrails.
-- `src/lib/`: shared infrastructure clients.
-- `supabase/migrations/`: database schema changes.
-- `supabase/functions/`: protected server-side operations.
-- `supabase/tests/`: database and RLS tests.
-- `test/`: basic project and invariant tests.
-- `assets/`: Expo application assets.
+## Connection domain
 
-## Planned Backend Direction
+A person may retain many ended connections but may belong to at most one active connection. Database triggers serialize membership changes and enforce the two-person maximum and one-active-connection rule. Invitations are server-generated, hash-only at rest, expiring, single-use, rate-limited, and consumed atomically.
 
-Supabase provides authentication and PostgreSQL. Database changes must be introduced through migrations. Private shore data is protected with server-side and database-side security rules, including Row Level Security on exposed application tables.
+Each completed connection owns exactly `private.total_pair_pebbles()` stable rows in `public.pair_pebbles` (provisionally eight). Four begin with the creator and four with the joining member. `id`, `pair_id`, `visual_seed`, and `created_at` are immutable. Direct client writes are revoked; RLS exposes only identities currently held by the caller, so a member cannot query the partner's bowl.
 
-Shore pairing is controlled through Postgres RPCs:
+`public.pebbles` remains the immutable transfer/touch event history. This avoids corrupting existing events or inventing identities for past actions. Existing two-member local connections receive a new eight-identity baseline during the forward migration; legacy event rows remain intact with a null identity reference.
 
-- `create_shore_with_invite()` creates a shore, inserts the creator as first member, stores only a token hash, and returns the raw invite once.
-- `join_shore_with_invite(text)` hashes the submitted token, rate-limits invalid attempts, validates expiry and single-use state, locks pair/invite state, checks capacity, inserts membership, and consumes the invite atomically.
+## Transfer and touch
 
-A user may belong to many closed shores but at most one active shore. The database membership trigger serializes create/join attempts for each user and rejects a second active membership; the client resolves its current shore from active shores only. Closed shores remain member-scoped historical spaces in Connection settings.
+`send_pebble(text, uuid)` derives the sender from `auth.uid()`, locks the selected identity and connection, verifies active membership and current ownership, resolves the other member, inserts one transfer event, changes the holder, and records an idempotency key in one transaction. Sender spoofing, partner-owned transfer, non-member transfer, duplicate requests, waiting connections, and ended connections are rejected server-side.
 
-Localization uses `expo-localization`, `i18n-js`, and a persisted AsyncStorage preference. System default resolves Hungarian only for Hungarian device locales and otherwise falls back to English; explicit English or Hungarian overrides it immediately.
+`touch_pebble(uuid)` accepts only the current holder touching the latest eligible incoming transfer in an active connection. It changes only the irreversible `touched` boolean. It does not transfer the identity and stores or exposes no touch timestamp.
 
-Pebble sending is controlled through `send_pebble(text)`. The client supplies only an idempotency request key. The database derives `sender_id` from `auth.uid()`, finds the authenticated user's active shore, rejects closed or ambiguous shore state, prevents direct sender spoofing, rejects rapid repeat sends, and stores only the pebble event fields.
+`get_bowl_state(uuid)` returns only identities currently held by the caller plus the minimal latest-transfer state needed for touch. The client subscribes to pair-filtered `pair_pebbles` and `pebbles` Realtime changes and re-fetches this protected projection.
 
-Pebble touching is controlled through `touch_pebble(uuid)`. Direct `touched` writes are revoked. The function locks the pebble, verifies that the authenticated user is a current shore member but not the sender, and transitions `touched` only from `false` to `true`. A database trigger prevents reversal or any mutation to the event fields.
+## Native bowl presentation
 
-The client fetches its active shore and subscribes only to `pebbles` events filtered by that shore's ID. The table is published to Supabase Realtime, while its RLS read policy remains the server-side visibility boundary. Incoming events are merged by pebble ID so reconnects, fetch races, and duplicate deliveries do not create duplicate shore entries or reverse a touched state.
+React Three Fiber's native canvas uses Expo GL—no WebView or DOM layer. One demand-driven renderer contains the bowl, all held pebbles, lights, and contact grounding. Pixel ratio is capped at 1.5. Geometry complexity is bounded, layouts for zero through eight are fixed, and resources/timers are disposed on teardown. The route pauses naturally when no invalidation occurs. GL initialization/render errors fall back to a 2D bowl with the same state and interaction semantics.
 
-Device push tokens are stored in `device_push_tokens` behind owner-only RLS policies. The mobile client registers only its current device token and never queries partner tokens. `deliver-pebble-push` is a Supabase Edge Function: it authenticates the sender, verifies the pebble belongs to that sender, resolves the partner's tokens with server-only credentials, and sends the fixed notification body through Expo. It removes immediately invalid tokens and uses a non-readable internal delivery record to prevent repeat delivery for a pebble.
+Procedural identities use persisted seeds for stable flattening, proportions, dents, asymmetry, color, and material response. `getBowlEnvironment(date)` continuously interpolates local-time light and subtle calendar-season variation with no location, weather, network, or relationship input.
 
-`close_shore(uuid)` locks and closes a shore for either current member, invalidates outstanding invitations, and leaves historical pebbles visible without allowing new sends or touches. Closed shore state is published through Realtime so an open partner client moves to its static view. `delete-pebble-account` is a protected Edge Function that closes active shores, removes the requester's push tokens, deletes their account, and removes now-empty shores. The exact data-retention contract is in `LIFECYCLE.md`.
+## Typography, localization, sound, and notifications
 
-`get_shore_memory(uuid)` returns only the newest 24 pebble records for individual rendering and a capped visual density for older records. The client renders the older portion as up to 96 non-interactive foundation stones. No totals, rates, or rankings are shown, and rendering work stays bounded even when the stored shore history is large.
+Source Serif 4 is loaded only for relational statements; Source Sans 3 is the functional system voice. The native splash remains until fonts resolve. English is fallback; Hungarian is selected by explicit preference or Hungarian system locale. Preferences update immediately and persist locally.
 
-`useShoreEnvironment()` derives light and seasonal palette changes only from the device's local calendar and clock. It refreshes while the app is active and on foregrounding. It has no database input and does not inspect pebble history, user behavior, or relationship state, so silence always leaves the shore complete and peaceful.
+Expo Audio supplies the lifecycle boundary for optional bowl sound. The setting defaults off and no placeholder audio assets ship. Push tokens remain owner-isolated; delivery is service-role-only inside the Edge Function. Push content says only “A pebble arrived.” and contains no badge value, count, exact time, activity, or response prompt. Client notification handling explicitly avoids setting badges.
 
-The iOS `PebbleWidget` is built with Expo Widgets and SwiftUI components. It is updated from app-owned snapshots and deep-links only to the normal Shore route, preserving intentional sending. Android widgets are deliberately not enabled until the Expo runtime has stable documented support. `PRODUCT_GUARDRAILS.md` describes the targeted schema, copy, and feature-structure checks included in `npm test`.
+## Platform boundary
 
-## Boundaries
+The permanent iOS/Android identifier is `io.github.viktormajor.pebble`. Expo GL, Expo Audio, Expo Font, and notification/icon configuration are native changes, so the first use of this milestone requires a new EAS development build. Changing JavaScript, Supabase data, local Wi-Fi, or LAN IP afterward does not require another APK.
 
-The architecture must preserve `PRODUCT_INVARIANTS.md`. Do not add chat, authored pebble payloads, reactions, scores, streaks, public profiles, social feeds, online presence, response-time exposure, or behavioral tracking that the product does not require.
+## Product boundary
+
+The architecture must preserve `PRODUCT_INVARIANTS.md`: no chat, authored payload, reaction, partner inventory comparison, online status, exact touch/read time, response metric, streak, score, achievement, engagement reminder, discovery, feed, or relationship analytics.

@@ -90,3 +90,13 @@ For ordinary TypeScript, JavaScript, styling, or UI changes: save the files and 
 Some guest/public networks use client isolation even when both devices show the same Wi-Fi SSID. In that case Metro LAN and laptop-local Supabase cannot be reached from the phone. `npx expo start --dev-client --tunnel` can tunnel Metro, but Metro tunneling alone does **not** make the laptop-local Supabase API available to an isolated phone.
 
 Create and reinstall a new EAS development APK only after native dependency/config changes: adding or upgrading a library with native code, changing Expo config/plugins, Android permissions, the Android package name, native Android files, or the Expo SDK/native runtime. Then rerun the EAS build command and install its APK before returning to the Metro loop.
+
+## Premium Bowl native runtime
+
+The Premium Bowl milestone adds Expo GL, Expo Audio, Expo Font/Splash configuration, native notification icon configuration, and React Three Fiber's native renderer. These are native dependency/configuration changes, so install one new development APK before testing this milestone:
+
+```bash
+npx eas-cli@latest build --platform android --profile development
+```
+
+After that APK is installed, changing Wi-Fi, local Supabase data, TypeScript, bowl geometry, layouts, colors, light, animation, copy, or other JavaScript does not require another EAS build. Use the normal `npm run dev:phone` loop.
