@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { colors, motion } from '../../design/tokens';
 import { getBowlLayout } from './bowlLayouts';
+import type { BowlEnvironment } from './bowlEnvironment';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 
-type Props = { pebbles: HeldPebble[]; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
+type Props = { pebbles: HeldPebble[]; environment: BowlEnvironment; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
 const FALLBACK_COLORS = ['#B9BBB4', '#A39A91', '#737B7C', '#929E97', '#AAABA5', '#C1C4BE'];
 
-export function BowlFallback({ pebbles, disabled, reducedMotion, onSend, onTouch }: Props) {
+export function BowlFallback({ pebbles, environment, disabled, reducedMotion, onSend, onTouch }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completed = useRef(false);
   const [travel] = useState(() => new Animated.Value(0));
@@ -51,8 +52,8 @@ export function BowlFallback({ pebbles, disabled, reducedMotion, onSend, onTouch
     opacity: travel.interpolate({ inputRange: [0, 0.78, 1], outputRange: [1, 1, 0] }),
   }), [travel]);
 
-  return <View style={styles.scene} onLayout={(event) => setSceneWidth(event.nativeEvent.layout.width)}>
-    <View pointerEvents="none" style={styles.haze} />
+  return <View style={[styles.scene, { backgroundColor: environment.backgroundEdge }]} onLayout={(event) => setSceneWidth(event.nativeEvent.layout.width)}>
+    <View pointerEvents="none" style={[styles.haze, { backgroundColor: environment.backgroundCenter }]} />
     <View style={[styles.bowl, { width: bowlWidth, height: bowlHeight, marginLeft: -bowlWidth / 2, marginTop: -bowlHeight * 0.42 }]}>
       <View style={styles.backRim} />
       <View style={styles.inside} />

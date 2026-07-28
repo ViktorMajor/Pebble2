@@ -2,9 +2,10 @@
 import { Canvas, type ThreeEvent, useFrame, useThree } from '@react-three/fiber/native';
 import * as Haptics from 'expo-haptics';
 import { Component, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixelRatio, Platform, StyleSheet, View } from 'react-native';
+import { PixelRatio, Platform, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bowlLighting, motion } from '../../design/tokens';
-import { BOWL_WORLD_BOUNDS, calculateBowlFraming, CAMERA_LOOK_AT } from './bowlComposition';
+import { BOWL_WORLD_BOUNDS, calculateBowlFraming, CAMERA_LOOK_AT, measuredBowlViewport, type BowlViewport } from './bowlComposition';
 import { getBowlLayout } from './bowlLayouts';
 import type { BowlEnvironment } from './bowlEnvironment';
 import { BowlFallback } from './BowlFallback';
@@ -23,6 +24,14 @@ export type BowlDiagnosticOptions = {
 };
 export type BowlAnimationCommand = { mode: 'rest' | 'hold' | 'cancel' | 'departure' | 'arrival'; nonce: number };
 export type BowlSceneMetrics = {
+  parentWidth: number;
+  parentHeight: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  windowWidth: number;
+  windowHeight: number;
+  safeAreaInsets: { top: number; right: number; bottom: number; left: number };
+  viewportAspectRatio: number;
   projectedWidthPercent: number;
   sideMargin: number;
   bowlBounds: string;
@@ -32,6 +41,9 @@ export type BowlSceneMetrics = {
   rimIntensity: number;
   activeFrameLoop: boolean;
   canvasInstances: number;
+  rendererMounts: number;
+  glReady: boolean;
+  fallbackActive: boolean;
   activeAnimation: string;
 };
 type Props = {
@@ -51,6 +63,7 @@ type BoundaryState = { failed: boolean };
 type MotionPhase = 'rest' | 'holding' | 'settling' | 'departing' | 'arriving';
 
 let mountedCanvasInstances = 0;
+let rendererMountCount = 0;
 
 class GLBoundary extends Component<BoundaryProps, BoundaryState> {
   state = { failed: false };
@@ -84,17 +97,22 @@ function Atmosphere({ environment }: { environment: BowlEnvironment }) {
     centerColor: { value: new THREE.Color(environment.backgroundCenter) },
     hazeColor: { value: new THREE.Color(environment.backgroundHaze) },
   }), [environment.backgroundCenter, environment.backgroundEdge, environment.backgroundHaze]);
-  return <mesh position={[0, 1, -7]} rotation={[-0.7156, 0, 0]} scale={[18, 18, 1]} renderOrder={-20}>
-    <planeGeometry args={[1, 1]} />
+  return <mesh frustumCulled={false} renderOrder={-20}>
+    <planeGeometry args={[2, 2]} />
     <shaderMaterial
       uniforms={uniforms}
-      vertexShader="varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }"
+      vertexShader="varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,1.0,1.0); }"
       fragmentShader="uniform vec3 edgeColor; uniform vec3 centerColor; uniform vec3 hazeColor; varying vec2 vUv; void main(){ float d=distance(vUv,vec2(0.5)); float centre=1.0-smoothstep(0.08,0.66,d); float haze=(1.0-smoothstep(0.0,0.32,d))*0.16; vec3 color=mix(edgeColor,centerColor,centre); color=mix(color,hazeColor,haze); gl_FragColor=vec4(color,1.0); }"
       depthWrite={false}
       depthTest={false}
     />
   </mesh>;
 }
+
+type CameraMetrics = Pick<BowlSceneMetrics,
+  'projectedWidthPercent' | 'sideMargin' | 'bowlBounds' | 'cameraDistance' | 'exposure' |
+  'keyIntensity' | 'rimIntensity' | 'activeFrameLoop' | 'activeAnimation'
+>;
 
 function quadraticBezier(
   start: import('three').Vector3,
@@ -308,7 +326,7 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
   environment: BowlEnvironment;
   diagnostics?: BowlDiagnosticOptions;
   activeAnimations: Map<string, MotionPhase>;
-  onMetrics?: Props['onMetrics'];
+  onMetrics?: (metrics: CameraMetrics) => void;
 }) {
   const { gl, set, size, invalidate } = useThree();
   useEffect(() => {
@@ -328,7 +346,6 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
       keyIntensity: environment.keyIntensity,
       rimIntensity: environment.rimIntensity,
       activeFrameLoop: activeAnimations.size > 0,
-      canvasInstances: mountedCanvasInstances,
       activeAnimation: [...activeAnimations.values()].join(', ') || 'rest',
     });
     invalidate();
@@ -340,7 +357,9 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
   </>;
 }
 
-function World({ pebbles, environment, disabled = false, reducedMotion, diagnostics, animationCommand, onMetrics, onSend, onTouch }: Omit<Props, 'forceFallback'>) {
+type WorldProps = Omit<Props, 'forceFallback' | 'onMetrics'> & { onMetrics?: (metrics: CameraMetrics) => void };
+
+function World({ pebbles, environment, disabled = false, reducedMotion, diagnostics, animationCommand, onMetrics, onSend, onTouch }: WorldProps) {
   const layout = getBowlLayout(pebbles.length);
   const { invalidate } = useThree();
   const [activeAnimations, setActiveAnimations] = useState<Map<string, MotionPhase>>(() => new Map());
@@ -368,38 +387,69 @@ function World({ pebbles, environment, disabled = false, reducedMotion, diagnost
 }
 
 export function BowlScene(props: Props) {
+  const { forceFallback, onMetrics } = props;
+  const window = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const [viewport, setViewport] = useState<BowlViewport | null>(null);
+  const [cameraMetrics, setCameraMetrics] = useState<CameraMetrics | null>(null);
   const [glReady, setGlReady] = useState(false);
   const [glTimedOut, setGlTimedOut] = useState(false);
+  const onLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setViewport((current) => measuredBowlViewport(width, height, current));
+  }, []);
   useEffect(() => {
-    if (glReady) return;
+    if (!viewport || glReady || props.forceFallback) return;
     const timer = setTimeout(() => setGlTimedOut(true), 5000);
     return () => clearTimeout(timer);
-  }, [glReady]);
-  const fallback = <BowlFallback pebbles={props.pebbles} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} onSend={props.onSend} onTouch={props.onTouch} />;
-  if (props.forceFallback || glTimedOut) return fallback;
-  return <View style={styles.container}>
-    {!glReady ? <View pointerEvents="none" style={styles.fallbackLayer}>{fallback}</View> : null}
-    <GLBoundary fallback={fallback}>
-      <Canvas
-        style={styles.canvas}
-        shadows="basic"
-        frameloop="demand"
-        camera={{ position: [0, 8, 10], fov: 40, near: 0.1, far: 60 }}
-        onCreated={({ gl }) => {
-          mountedCanvasInstances += 1;
-          gl.setPixelRatio(Math.min(PixelRatio.get(), props.diagnostics?.lowQuality ? 1 : 1.35));
-          gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = bowlLighting.exposure;
-          gl.outputColorSpace = THREE.SRGBColorSpace;
-          gl.shadowMap.type = THREE.BasicShadowMap;
-          setGlReady(true);
-        }}
-        onPointerMissed={() => undefined}
-      >
-        <World {...props} />
-      </Canvas>
-    </GLBoundary>
-    <CanvasLifecycleCounter />
+  }, [glReady, props.forceFallback, viewport]);
+  useEffect(() => {
+    if (!viewport || !cameraMetrics) return;
+    onMetrics?.({
+      ...cameraMetrics,
+      parentWidth: viewport.width,
+      parentHeight: viewport.height,
+      canvasWidth: viewport.width,
+      canvasHeight: viewport.height,
+      windowWidth: window.width,
+      windowHeight: window.height,
+      safeAreaInsets: { top: insets.top, right: insets.right, bottom: insets.bottom, left: insets.left },
+      viewportAspectRatio: viewport.width / viewport.height,
+      canvasInstances: mountedCanvasInstances,
+      rendererMounts: rendererMountCount,
+      glReady,
+      fallbackActive: Boolean(forceFallback || glTimedOut),
+    });
+  }, [cameraMetrics, forceFallback, glReady, glTimedOut, insets.bottom, insets.left, insets.right, insets.top, onMetrics, viewport, window.height, window.width]);
+  const fallback = <BowlFallback pebbles={props.pebbles} environment={props.environment} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} onSend={props.onSend} onTouch={props.onTouch} />;
+  const showFallback = Boolean(props.forceFallback || glTimedOut);
+  return <View onLayout={onLayout} style={[styles.container, { backgroundColor: props.environment.backgroundEdge }]}>
+    {viewport ? <View style={[styles.measuredLayer, { width: viewport.width, height: viewport.height }]}>
+      {(!glReady || showFallback) ? <View pointerEvents={showFallback ? 'auto' : 'none'} style={styles.fallbackLayer}>{fallback}</View> : null}
+      {!showFallback ? <GLBoundary fallback={<View style={styles.fallbackLayer}>{fallback}</View>}>
+        <Canvas
+          style={{ ...styles.canvas, width: viewport.width, height: viewport.height }}
+          shadows="basic"
+          frameloop="demand"
+          camera={{ position: [0, 8, 10], fov: 40, near: 0.1, far: 60 }}
+          onCreated={({ gl }) => {
+            mountedCanvasInstances += 1;
+            rendererMountCount += 1;
+            gl.setClearColor(props.environment.backgroundEdge, 1);
+            gl.setPixelRatio(Math.min(PixelRatio.get(), props.diagnostics?.lowQuality ? 1 : 1.35));
+            gl.toneMapping = THREE.ACESFilmicToneMapping;
+            gl.toneMappingExposure = bowlLighting.exposure;
+            gl.outputColorSpace = THREE.SRGBColorSpace;
+            gl.shadowMap.type = THREE.BasicShadowMap;
+            setGlReady(true);
+          }}
+          onPointerMissed={() => undefined}
+        >
+          <World {...props} onMetrics={setCameraMetrics} />
+          <CanvasLifecycleCounter />
+        </Canvas>
+      </GLBoundary> : null}
+    </View> : null}
   </View>;
 }
 
@@ -409,7 +459,8 @@ function CanvasLifecycleCounter() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, minHeight: 360 },
-  canvas: { flex: 1 },
+  container: { width: '100%', alignSelf: 'stretch', flex: 1, minHeight: 300, position: 'relative', overflow: 'visible' },
+  measuredLayer: { position: 'absolute', top: 0, left: 0 },
+  canvas: { position: 'absolute', top: 0, left: 0 },
   fallbackLayer: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
 });

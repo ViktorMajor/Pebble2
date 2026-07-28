@@ -19,6 +19,18 @@ export type BowlFraming = {
   horizontalFovRadians: number;
 };
 
+export type BowlViewport = { width: number; height: number };
+
+export function isValidBowlViewport(width: number, height: number) {
+  return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0;
+}
+
+export function measuredBowlViewport(width: number, height: number, previous: BowlViewport | null): BowlViewport | null {
+  if (!isValidBowlViewport(width, height)) return previous;
+  if (previous && Math.abs(previous.width - width) < 0.5 && Math.abs(previous.height - height) < 0.5) return previous;
+  return { width, height };
+}
+
 export function calculateBowlFraming(width: number, height: number): BowlFraming {
   const safeWidth = Math.max(width, 1);
   const safeHeight = Math.max(height, 1);
