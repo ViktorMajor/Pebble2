@@ -61,7 +61,7 @@ Deno.serve(async (request) => {
   });
   const { data: pebble, error: pebbleError } = await admin
     .from('pebbles')
-    .select('pair_id, sender_id')
+    .select('pair_id, pair_pebble_id, sender_id')
     .eq('id', body.pebbleId)
     .maybeSingle();
 
@@ -85,15 +85,22 @@ Deno.serve(async (request) => {
     return json({ delivered: false });
   }
 
-  const [{ data: senderProfile }, { data: tokens, error: tokenError }] = await Promise.all([
-    admin.from('profiles').select('display_name').eq('id', userData.user.id).maybeSingle(),
-    admin
-      .from('device_push_tokens')
-      .select('expo_push_token')
-      .eq('user_id', recipientMembership.user_id),
-  ]);
+  if (pebble.pair_pebble_id) {
+    const [{ data: identity }, { data: latestEvent }] = await Promise.all([
+      admin.from('pair_pebbles').select('current_holder_id').eq('id', pebble.pair_pebble_id).maybeSingle(),
+      admin.from('pebbles').select('id').eq('pair_pebble_id', pebble.pair_pebble_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (identity?.current_holder_id !== recipientMembership.user_id || latestEvent?.id !== body.pebbleId) {
+      return json({ delivered: false });
+    }
+  }
 
-  if (tokenError || !tokens?.length || !senderProfile) {
+  const { data: tokens, error: tokenError } = await admin
+    .from('device_push_tokens')
+    .select('expo_push_token')
+    .eq('user_id', recipientMembership.user_id);
+
+  if (tokenError || !tokens?.length) {
     return json({ delivered: false });
   }
 
@@ -118,7 +125,7 @@ Deno.serve(async (request) => {
         to: token.expo_push_token,
         sound: 'default',
         title: 'Pebble',
-        body: `${senderProfile.display_name} sent you a pebble.`,
+        body: 'A pebble arrived.',
         data: { type: 'pebble', pairId: pebble.pair_id },
       })),
     ),
