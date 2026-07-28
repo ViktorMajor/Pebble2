@@ -1,8 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing } from '../../design/tokens';
 import { useI18n } from '../../i18n';
 import { loadSoundPreference, setSoundEnabled } from '../sound/bowlSoundService';
@@ -25,6 +25,7 @@ function Row({ href, title }: { href: Href; title: string }) {
 
 export function SettingsScreen() {
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [permission, setPermission] = useState('');
   const [sounds, setSounds] = useState(false);
 
@@ -37,7 +38,7 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: spacing.xl + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <Text style={styles.heading}>{t('settings.profile')}</Text>
         <Row href="/(app)/settings/profile" title={t('settings.profile')} />
 
@@ -75,12 +76,13 @@ export function SettingsScreen() {
           <>
             <Text style={styles.heading}>{t('settings.development')}</Text>
             <Row href="/(app)/bowl-lab" title={t('settings.bowlLab')} />
+            <Text style={styles.developmentNote}>{t('settings.developmentOnly')}</Text>
           </>
         ) : null}
 
         <Text style={styles.heading}>{t('settings.account')}</Text>
         <Row href="/(app)/settings/account" title={t('settings.account')} />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -118,5 +120,6 @@ const styles = StyleSheet.create({
   rowTitle: { fontFamily: fonts.system, color: colors.textPrimary, fontSize: 17 },
   arrow: { fontFamily: fonts.system, color: colors.textSubdued, fontSize: 24 },
   detail: { fontFamily: fonts.system, color: colors.textSubdued, fontSize: 13, marginTop: 3, maxWidth: 270 },
+  developmentNote: { fontFamily: fonts.system, color: colors.textMuted, fontSize: 13, lineHeight: 18, marginTop: spacing.sm },
   grow: { flex: 1 },
 });
