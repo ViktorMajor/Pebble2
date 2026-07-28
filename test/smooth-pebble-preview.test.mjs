@@ -24,20 +24,20 @@ test('pairing preview shares PebbleVisual but has no domain interaction', () => 
   const previewComponent = scene.slice(scene.indexOf('function PairingPreviewStones'), scene.indexOf('function Stone'));
   assert.match(previewComponent, /<PebbleVisual/);
   assert.doesNotMatch(previewComponent, /onPointer|onSend|onTouch|Haptics|HeldPebble/);
-  assert.match(scene, /composition === 'pairing-single'[\s\S]*<PairingPreviewStones/);
-  assert.match(scene, /composition === 'pairing-two'[\s\S]*<PairingPreviewStones[\s\S]*<SecondaryBowl/);
-  assert.equal((scene.match(/<PairingPreviewStones/g) ?? []).length, 2);
+  assert.match(scene, /composition === 'bowl' \? <BowlMesh[\s\S]*<PairingPreviewStones/);
+  assert.doesNotMatch(scene, /SecondaryBowl/);
+  assert.equal((scene.match(/<PairingPreviewStones/g) ?? []).length, 1);
   assert.match(scene, /composition === 'bowl' \? assignments\.map/);
   assert.doesNotMatch([hero, preview].join('\n'), /from ['"].*(supabase|bowlService|useHeldPebbles)/i);
 });
 
-test('fallback preview is passive and keeps the second bowl empty', () => {
+test('fallback preview is passive and renders no secondary bowl', () => {
   assert.match(fallback, /importantForAccessibility="no-hide-descendants"/);
   assert.match(fallback, /pointerEvents="none"/);
   assert.match(fallback, /previewPebbles\.slice\(0, 3\)\.map/);
   const passivePreview = fallback.slice(fallback.indexOf("{composition !== 'bowl' ?"), fallback.indexOf('<View pointerEvents="none" style={styles.frontRim}'));
   assert.doesNotMatch(passivePreview, /Pressable|begin\(|end\(/);
-  assert.match(fallback, /composition === 'pairing-two' \? <View pointerEvents="none" style=\{\[styles\.secondBowl/);
+  assert.doesNotMatch(fallback, /secondBowl|composition === 'pairing-two' \?/);
 });
 
 test('standard and diagnostic quality are geometry-only and preserve native DPR', () => {

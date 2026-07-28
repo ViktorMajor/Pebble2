@@ -102,7 +102,7 @@ class GLBoundary extends Component<BoundaryProps, BoundaryState> {
   render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
 
-function BowlMesh({ diagnostics, position = [0, -0.12, 0], scale = 1, muted = false, materialRef }: { diagnostics?: BowlDiagnosticOptions; position?: readonly [number, number, number]; scale?: number; muted?: boolean; materialRef?: RefObject<import('three').MeshPhysicalMaterial | null> }) {
+function BowlMesh({ diagnostics, position = [0, -0.12, 0], scale = 1 }: { diagnostics?: BowlDiagnosticOptions; position?: readonly [number, number, number]; scale?: number }) {
   const geometry = useMemo(() => createBowlGeometry(), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
   if (diagnostics?.hideBowl) return null;
@@ -111,34 +111,10 @@ function BowlMesh({ diagnostics, position = [0, -0.12, 0], scale = 1, muted = fa
       {diagnostics?.unlit ? (
         <meshBasicMaterial color="#FFFFFF" wireframe={diagnostics.wireframe} side={THREE.DoubleSide} vertexColors />
       ) : (
-        <meshPhysicalMaterial ref={materialRef} color="#FFFFFF" wireframe={diagnostics?.wireframe} vertexColors roughness={0.9} metalness={0} clearcoat={0.008} clearcoatRoughness={0.95} side={THREE.DoubleSide} transparent={muted} opacity={muted ? 0.62 : 1} />
+        <meshPhysicalMaterial color="#FFFFFF" wireframe={diagnostics?.wireframe} vertexColors roughness={0.92} metalness={0} clearcoat={0.006} clearcoatRoughness={0.97} side={THREE.DoubleSide} />
       )}
     </mesh>
   </group>;
-}
-
-function SecondaryBowl({ diagnostics, reducedMotion }: { diagnostics?: BowlDiagnosticOptions; reducedMotion: boolean }) {
-  const group = useRef<import('three').Group>(null);
-  const material = useRef<import('three').MeshPhysicalMaterial>(null);
-  const elapsed = useRef(0);
-  const settled = useRef(reducedMotion);
-  const { invalidate } = useThree();
-  useEffect(() => {
-    if (group.current) { group.current.position.set(0.92, -0.2, reducedMotion ? -0.7 : -1.18); group.current.scale.setScalar(reducedMotion ? 1 : 0.94); }
-    if (material.current) material.current.opacity = reducedMotion ? 0.62 : 0;
-    if (!reducedMotion) invalidate();
-  }, [invalidate, reducedMotion]);
-  useFrame((_state, delta) => {
-    if (settled.current || !group.current) return;
-    elapsed.current += Math.min(delta, 1 / 20);
-    const progress = Math.min(1, elapsed.current / 0.65);
-    const eased = progress * progress * (3 - 2 * progress);
-    group.current.position.z = THREE.MathUtils.lerp(-1.18, -0.7, eased);
-    group.current.scale.setScalar(THREE.MathUtils.lerp(0.94, 1, eased));
-    if (material.current) material.current.opacity = 0.62 * eased;
-    if (progress >= 1) settled.current = true; else invalidate();
-  });
-  return <group ref={group}><BowlMesh diagnostics={diagnostics} scale={0.56} muted materialRef={material} /></group>;
 }
 
 function Atmosphere({ environment }: { environment: BowlEnvironment }) {
@@ -186,12 +162,12 @@ function quadraticBezier(
 }
 
 const CONTACT_SHADOW_VERTEX_SHADER = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }';
-const CONTACT_SHADOW_FRAGMENT_SHADER = 'uniform vec3 shadowColor; uniform float shadowOpacity; uniform float falloffStart; varying vec2 vUv; void main(){ float distanceFromCenter=length((vUv-vec2(0.5))*2.0); float alpha=(1.0-smoothstep(falloffStart,1.0,distanceFromCenter))*shadowOpacity; gl_FragColor=vec4(shadowColor,alpha); }';
+const CONTACT_SHADOW_FRAGMENT_SHADER = 'uniform vec3 shadowColor; uniform float shadowOpacity; uniform float softness; varying vec2 vUv; void main(){ vec2 point=(vUv-vec2(0.5))*2.0; float radiusSquared=dot(point,point); float feather=1.0-smoothstep(0.68,1.0,sqrt(radiusSquared)); float alpha=exp(-radiusSquared*softness)*feather*shadowOpacity; gl_FragColor=vec4(shadowColor,alpha); }';
 
 function PebbleContactShadow({ visualSeed, visualVariant, layer, diagnostics }: { visualSeed: number; visualVariant: number; layer: number; diagnostics?: BowlDiagnosticOptions }) {
   const materialSpec = useMemo(() => pebbleMaterial(visualSeed, visualVariant), [visualSeed, visualVariant]);
-  const coreUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#77746C') }, shadowOpacity: { value: 0.17 }, falloffStart: { value: 0.08 } }), []);
-  const penumbraUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#817D74') }, shadowOpacity: { value: 0.06 }, falloffStart: { value: 0.03 } }), []);
+  const coreUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#77746C') }, shadowOpacity: { value: 0.135 }, softness: { value: 4.8 } }), []);
+  const penumbraUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#817D74') }, shadowOpacity: { value: 0.045 }, softness: { value: 2.35 } }), []);
   const mode = diagnostics?.contactShadowMode ?? 'both';
   if (mode === 'none' || diagnostics?.hidePebbles) return null;
   return <group position={[0, materialSpec.contactOffsetY, 0]}>
@@ -536,7 +512,7 @@ function World({ pebbles, previewPebbles = [], environment, disabled = false, re
     <directionalLight position={[-4, 6, 5]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.key} intensity={diagnostics?.fixedWhiteLight ? 1.2 : environment.keyIntensity} castShadow shadow-mapSize-width={diagnostics?.lowQuality ? 256 : 512} shadow-mapSize-height={diagnostics?.lowQuality ? 256 : 512} shadow-bias={-0.0004} />
     <directionalLight position={[4, 3, -4]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.rim} intensity={diagnostics?.fixedWhiteLight ? 0.45 : environment.rimIntensity} />
     <pointLight position={[0, 1.5, 2.4]} color="#D2CCC6" intensity={bowlLighting.fill} distance={8} decay={2} />
-    {composition === 'pairing-single' ? <><BowlMesh diagnostics={diagnostics} scale={0.84} /><PairingPreviewStones pebbles={previewPebbles} diagnostics={diagnostics} position={[0, -0.12, 0]} scale={0.84} /></> : composition === 'pairing-two' ? <><BowlMesh diagnostics={diagnostics} position={[-0.72, -0.08, 0.25]} scale={0.72} /><PairingPreviewStones pebbles={previewPebbles} diagnostics={diagnostics} position={[-0.72, -0.08, 0.25]} scale={0.72} /><SecondaryBowl diagnostics={diagnostics} reducedMotion={reducedMotion} /></> : <BowlMesh diagnostics={diagnostics} />}
+    {composition === 'bowl' ? <BowlMesh diagnostics={diagnostics} /> : <><BowlMesh diagnostics={diagnostics} scale={0.84} /><PairingPreviewStones pebbles={previewPebbles} diagnostics={diagnostics} position={[0, -0.12, 0]} scale={0.84} /></>}
     {composition === 'bowl' ? assignments.map(({ pebble, slot: assignedSlot }) => <Stone key={pebble.id} pebble={pebble} slot={assignedSlot} disabled={disabled || (activeAnimations.size > 0 && !activeAnimations.has(pebble.id))} reducedMotion={reducedMotion} diagnostics={diagnostics} debugCommand={pebble.id === diagnosticTarget ? animationCommand : undefined} onActivity={onActivity} onSend={onSend} onTouch={onTouch} />) : null}
     <CameraRig environment={environment} diagnostics={diagnostics} activeAnimations={activeAnimations} onMetrics={onMetrics} />
   </>;

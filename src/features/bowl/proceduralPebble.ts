@@ -152,8 +152,8 @@ export function pebbleMaterial(seed: number, visualVariant: number) {
     edgeColor: identity.edgeColor,
     luminance: relativeLuminance(identity.color),
     contactOffsetY: -0.54 * identity.flattening + 0.018,
-    shadowCoreScale: [0.46 * identity.width, 0.32 * identity.depth] as const,
-    shadowPenumbraScale: [0.82 * identity.width, 0.59 * identity.depth] as const,
+    shadowCoreScale: [0.42 * identity.width, 0.29 * identity.depth] as const,
+    shadowPenumbraScale: [0.78 * identity.width, 0.55 * identity.depth] as const,
   };
 }
 
@@ -236,12 +236,13 @@ export function getMicroNormalTextureCacheMetrics() {
 }
 
 export const BOWL_INNER_FLOOR_Y = -0.24;
-export const BOWL_RIM_Y = 0.66;
+export const BOWL_RIM_Y = 0.69;
 export const BOWL_CAVITY_DEPTH = BOWL_RIM_Y - BOWL_INNER_FLOOR_Y;
-export const BOWL_RIM_THICKNESS = 0.15;
+export const BOWL_RIM_THICKNESS = 0.18;
+export const BOWL_WIDTH_TO_DEPTH = 1.14;
 export const BOWL_PROFILE = [
-  [0.02, -0.46], [0.55, -0.43], [1.08, -0.29], [1.5, -0.02], [1.8, 0.36], [1.93, 0.62],
-  [1.78, 0.66], [1.58, 0.49], [1.26, 0.21], [0.82, -0.04], [0.34, -0.2], [0.02, BOWL_INNER_FLOOR_Y],
+  [0.02, -0.47], [0.62, -0.45], [1.15, -0.31], [1.58, 0], [1.85, 0.42], [1.94, 0.65],
+  [1.76, BOWL_RIM_Y], [1.59, 0.53], [1.31, 0.27], [0.86, -0.03], [0.36, -0.22], [0.02, BOWL_INNER_FLOOR_Y],
 ] as const;
 
 export function createBowlGeometry() {
@@ -253,7 +254,8 @@ export function createBowlGeometry() {
     point.fromBufferAttribute(positions, index);
     const angle = Math.atan2(point.z, point.x);
     const irregularity = 1 + Math.sin(angle * 3 + 0.7) * 0.009 + Math.sin(angle * 7 - 0.4) * 0.004;
-    point.x *= irregularity; point.z *= irregularity;
+    point.x *= irregularity * BOWL_WIDTH_TO_DEPTH;
+    point.z *= irregularity;
     positions.setXYZ(index, point.x, point.y, point.z);
   }
   geometry.computeVertexNormals();
@@ -268,7 +270,7 @@ export function createBowlGeometry() {
   const innerMixed = new THREE.Color();
   for (let index = 0; index < positions.count; index += 1) {
     const y = positions.getY(index);
-    const radius = Math.hypot(positions.getX(index), positions.getZ(index));
+    const radius = Math.hypot(positions.getX(index) / BOWL_WIDTH_TO_DEPTH, positions.getZ(index));
     const inwardUpward = THREE.MathUtils.clamp(normals.getY(index) * 2.1, 0, 1);
     const cavityDepth = THREE.MathUtils.clamp((BOWL_RIM_Y - y) / BOWL_CAVITY_DEPTH, 0, 1);
     const centralDepth = 1 - THREE.MathUtils.clamp(radius / 1.72, 0, 1);

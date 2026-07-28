@@ -1,4 +1,4 @@
-export const BOWL_WORLD_DIAMETER = 3.84;
+export const BOWL_WORLD_DIAMETER = 4.44;
 export const BOWL_TARGET_WIDTH_RATIO = 0.74;
 export const BOWL_MIN_WIDTH_RATIO = 0.7;
 export const BOWL_MAX_WIDTH_RATIO = 0.78;
@@ -7,8 +7,8 @@ export const CAMERA_VERTICAL_FOV = 40;
 export const CAMERA_DOWNWARD_ANGLE_DEGREES = 41;
 export const CAMERA_LOOK_AT = [0, 0.78, 0] as const;
 export const BOWL_WORLD_BOUNDS = {
-  min: [-1.95, -0.47, -1.95] as const,
-  max: [1.95, 0.47, 1.95] as const,
+  min: [-2.23, -0.48, -1.96] as const,
+  max: [2.23, 0.7, 1.96] as const,
 };
 
 export type BowlFraming = {

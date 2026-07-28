@@ -6,6 +6,7 @@ import {
   BOWL_LAYOUTS,
   estimateProjectedFootprintOverlap,
   IDENTITY_LAYOUT_ORDER,
+  PEBBLE_LAYOUT_SCALE_MULTIPLIER,
 } from '../src/features/bowl/bowlLayouts.ts';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -18,6 +19,7 @@ const packageJson = read('package.json');
 const luminances = [0.2922, 0.2031, 0.1798, 0.1278, 0.2780, 0.0947];
 
 test('zero-through-six layouts stay explicit, deterministic, open, and layered', () => {
+  assert.equal(PEBBLE_LAYOUT_SCALE_MULTIPLIER, 1.15);
   assert.deepEqual(Object.keys(BOWL_LAYOUTS).map(Number), [0, 1, 2, 3, 4, 5, 6]);
   for (let count = 0; count <= 6; count += 1) {
     const layout = BOWL_LAYOUTS[count];
@@ -78,8 +80,9 @@ test('every visual stone owns a non-interactive contact core and penumbra', () =
   const shadow = scene.slice(scene.indexOf('function PebbleContactShadow'), scene.indexOf('function PebbleVisual'));
   assert.match(shadow, /shadowCoreScale/);
   assert.match(shadow, /shadowPenumbraScale/);
-  assert.match(shadow, /shadowOpacity: \{ value: 0\.17 \}/);
-  assert.match(shadow, /shadowOpacity: \{ value: 0\.06 \}/);
+  assert.match(shadow, /shadowOpacity: \{ value: 0\.135 \}/);
+  assert.match(shadow, /shadowOpacity: \{ value: 0\.045 \}/);
+  assert.match(scene, /exp\(-radiusSquared\*softness\)/);
   assert.equal((shadow.match(/raycast=\{\(\) => undefined\}/g) ?? []).length, 2);
   assert.match(scene, /<PebbleContactShadow[\s\S]*<PebbleVisual/);
   assert.doesNotMatch(scene, /function ContactShadow/);
@@ -87,9 +90,11 @@ test('every visual stone owns a non-interactive contact core and penumbra', () =
 
 test('Bowl profile creates a finite deeper cavity and visible rim', () => {
   assert.match(procedural, /BOWL_INNER_FLOOR_Y = -0\.24/);
-  assert.match(procedural, /BOWL_RIM_Y = 0\.66/);
+  assert.match(procedural, /BOWL_RIM_Y = 0\.69/);
   assert.match(procedural, /BOWL_CAVITY_DEPTH = BOWL_RIM_Y - BOWL_INNER_FLOOR_Y/);
-  assert.match(procedural, /BOWL_RIM_THICKNESS = 0\.15/);
+  assert.match(procedural, /BOWL_RIM_THICKNESS = 0\.18/);
+  assert.match(procedural, /BOWL_WIDTH_TO_DEPTH = 1\.14/);
+  assert.match(procedural, /point\.x \*= irregularity \* BOWL_WIDTH_TO_DEPTH/);
   assert.match(procedural, /geometry\.computeVertexNormals\(\)/);
   assert.match(procedural, /geometry\.computeBoundingBox\(\)/);
   assert.match(procedural, /geometry\.computeBoundingSphere\(\)/);
