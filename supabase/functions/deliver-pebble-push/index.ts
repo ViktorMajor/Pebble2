@@ -69,8 +69,8 @@ Deno.serve(async (request) => {
     return json({ error: 'Pebble unavailable.' }, 404);
   }
 
-  const { data: pair } = await admin.from('pairs').select('status').eq('id', pebble.pair_id).maybeSingle();
-  if (!pair || pair.status !== 'active') {
+  const { data: pair } = await admin.from('pairs').select('status, pebble_model_status').eq('id', pebble.pair_id).maybeSingle();
+  if (!pair || pair.status !== 'active' || pair.pebble_model_status !== 'six') {
     return json({ delivered: false });
   }
 
@@ -87,10 +87,10 @@ Deno.serve(async (request) => {
 
   if (pebble.pair_pebble_id) {
     const [{ data: identity }, { data: latestEvent }] = await Promise.all([
-      admin.from('pair_pebbles').select('current_holder_id').eq('id', pebble.pair_pebble_id).maybeSingle(),
+      admin.from('pair_pebbles').select('current_holder_id, retired_at').eq('id', pebble.pair_pebble_id).maybeSingle(),
       admin.from('pebbles').select('id').eq('pair_pebble_id', pebble.pair_pebble_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
-    if (identity?.current_holder_id !== recipientMembership.user_id || latestEvent?.id !== body.pebbleId) {
+    if (identity?.retired_at || identity?.current_holder_id !== recipientMembership.user_id || latestEvent?.id !== body.pebbleId) {
       return json({ delivered: false });
     }
   }
