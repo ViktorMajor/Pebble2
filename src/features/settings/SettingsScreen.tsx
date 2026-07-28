@@ -37,7 +37,7 @@ export function SettingsScreen() {
   }, [t]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={['left', 'right']} style={styles.safe}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: spacing.xl + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <Text style={styles.heading}>{t('settings.profile')}</Text>
         <Row href="/(app)/settings/profile" title={t('settings.profile')} />
@@ -67,8 +67,8 @@ export function SettingsScreen() {
               setSounds(value);
               void setSoundEnabled(value);
             }}
-            trackColor={{ false: colors.border, true: '#69736F' }}
-            thumbColor={colors.textPrimary}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.surface}
           />
         </View>
 

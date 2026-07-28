@@ -64,7 +64,7 @@ export function AuthScreen() {
               maxLength={80}
               onChangeText={setDisplayName}
               placeholder={t('auth.displayName')}
-              placeholderTextColor="#747B80"
+              placeholderTextColor={colors.textMuted}
               style={styles.input}
               value={displayName}
             />
@@ -79,7 +79,7 @@ export function AuthScreen() {
             returnKeyType="next"
             onChangeText={setEmail}
             placeholder={t('auth.email')}
-            placeholderTextColor="#747B80"
+            placeholderTextColor={colors.textMuted}
             style={styles.input}
             value={email}
           />
@@ -90,7 +90,7 @@ export function AuthScreen() {
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             onChangeText={setPassword}
             placeholder={t('auth.password')}
-            placeholderTextColor="#747B80"
+            placeholderTextColor={colors.textMuted}
             secureTextEntry
             returnKeyType="done"
             onSubmitEditing={() => void submit()}
@@ -182,13 +182,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: '#5B625F',
+    backgroundColor: colors.primary,
   },
   disabledButton: {
-    opacity: 0.45,
+    opacity: 0.56,
   },
   primaryButtonText: {
-    color: colors.textPrimary,
+    color: '#17231F',
     fontFamily: fonts.systemSemibold,
     fontSize: 16,
     fontWeight: '600',

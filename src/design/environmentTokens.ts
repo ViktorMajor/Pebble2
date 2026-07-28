@@ -1,0 +1,33 @@
+export const luminousEnvironment = {
+  upperMist: '#DCE6E5',
+  centralPearl: '#EEECE5',
+  lowerMineral: '#E8DED2',
+  elevatedSurface: '#F4F1EB',
+  secondarySurface: '#E4E8E4',
+  border: '#C8D0CB',
+  textPrimary: '#303937',
+  relationalPrimary: '#343936',
+  textSecondary: '#424C48',
+  textMuted: '#8B9490',
+  error: '#743633',
+  sage: '#789287',
+  sagePressed: '#667F75',
+  celadon: '#AFC2B8',
+  warmAccent: '#D3B7A5',
+  coolAccent: '#AABFC1',
+  bowlExterior: '#9B9D95',
+  bowlInterior: '#B9B9AE',
+  bowlRim: '#D0CDC1',
+  contactTone: '#747A75',
+  reflectedInterior: '#D2C4B5',
+  pebbles: ['#C8C2B5', '#8FA097', '#AA9588', '#7F8B89', '#D0CCC1', '#68716F'],
+} as const;
+
+export const luminousTimeStops = [
+  { hour: 0, phase: 'night' as const, upper: '#AEBCC0', centre: '#C8CFCC', lower: '#C9BEB5', key: '#D2CCC6', keyIntensity: 0.98, rim: '#B8C0C1', rimIntensity: 0.26 },
+  { hour: 6, phase: 'morning' as const, upper: '#DCE6E5', centre: '#EEECE5', lower: '#E8DED2', key: '#D2CCC6', keyIntensity: 1.06, rim: '#BDC7C5', rimIntensity: 0.24 },
+  { hour: 11, phase: 'day' as const, upper: '#E2E9E6', centre: '#F0EEE8', lower: '#E9E1D7', key: '#D2CCC6', keyIntensity: 1.1, rim: '#BEC7C5', rimIntensity: 0.22 },
+  { hour: 17, phase: 'evening' as const, upper: '#D8D4DF', centre: '#E9E4DF', lower: '#E4D2C7', key: '#D2CCC6', keyIntensity: 1.03, rim: '#BEC2C5', rimIntensity: 0.25 },
+  { hour: 21, phase: 'night' as const, upper: '#AEBCC0', centre: '#C8CFCC', lower: '#C9BEB5', key: '#D2CCC6', keyIntensity: 0.98, rim: '#B8C0C1', rimIntensity: 0.26 },
+  { hour: 24, phase: 'night' as const, upper: '#AEBCC0', centre: '#C8CFCC', lower: '#C9BEB5', key: '#D2CCC6', keyIntensity: 0.98, rim: '#B8C0C1', rimIntensity: 0.26 },
+] as const;

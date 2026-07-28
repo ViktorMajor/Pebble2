@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { colors } from '../../design/tokens';
+import { luminousTimeStops } from '../../design/environmentTokens';
 
 export type BowlLightPhase = 'morning' | 'day' | 'evening' | 'night';
 export type BowlSeason = 'spring' | 'summer' | 'autumn' | 'winter';
@@ -11,20 +12,14 @@ export type BowlEnvironment = {
   backgroundEdge: string;
   backgroundCenter: string;
   backgroundHaze: string;
+  textPrimary: string;
   key: string;
   keyIntensity: number;
   rim: string;
   rimIntensity: number;
 };
 
-const stops = [
-  { hour: 0, phase: 'night' as const, centre: '#243137', haze: '#2D3C42', key: '#C9C0B7', keyIntensity: 1.04, rim: '#B9C3C4', rimIntensity: 0.76 },
-  { hour: 6, phase: 'morning' as const, centre: '#29373D', haze: '#32434A', key: '#CBC4BC', keyIntensity: 1.13, rim: '#BBC6C7', rimIntensity: 0.7 },
-  { hour: 11, phase: 'day' as const, centre: '#2B383D', haze: '#34444A', key: '#CFC6BD', keyIntensity: 1.18, rim: '#BDC6C6', rimIntensity: 0.68 },
-  { hour: 17, phase: 'evening' as const, centre: '#28353B', haze: '#314147', key: '#CDC4BA', keyIntensity: 1.14, rim: '#BAC4C5', rimIntensity: 0.7 },
-  { hour: 21, phase: 'night' as const, centre: '#243137', haze: '#2D3C42', key: '#C9C0B7', keyIntensity: 1.04, rim: '#B9C3C4', rimIntensity: 0.76 },
-  { hour: 24, phase: 'night' as const, centre: '#243137', haze: '#2D3C42', key: '#C9C0B7', keyIntensity: 1.04, rim: '#B9C3C4', rimIntensity: 0.76 },
-];
+const stops = luminousTimeStops;
 
 function hexToRgb(value: string) {
   const number = Number.parseInt(value.slice(1), 16);
@@ -67,9 +62,10 @@ export function getBowlEnvironment(date: Date): BowlEnvironment {
     phase: current.phase,
     season: seasonForMonth(date.getMonth()),
     phaseProgress: progress,
-    backgroundEdge: colors.atmosphere,
+    backgroundEdge: mixHex(current.upper, next.upper, progress),
     backgroundCenter: mixHex(current.centre, next.centre, progress),
-    backgroundHaze: mixHex(current.haze, next.haze, progress),
+    backgroundHaze: mixHex(current.lower, next.lower, progress),
+    textPrimary: current.phase === 'night' ? '#26302E' : colors.relationalPrimary,
     key: mixHex(current.key, next.key, progress),
     keyIntensity: current.keyIntensity + (next.keyIntensity - current.keyIntensity) * progress + seasonalDrift,
     rim: mixHex(current.rim, next.rim, progress),

@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unknown-property */
 import { Canvas, type ThreeEvent, useFrame, useThree } from '@react-three/fiber/native';
 import * as Haptics from 'expo-haptics';
-import { Component, type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, type ErrorInfo, type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, Platform, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bowlLighting, motion } from '../../design/tokens';
@@ -52,6 +52,7 @@ type Props = {
   disabled?: boolean;
   reducedMotion: boolean;
   forceFallback?: boolean;
+  composition?: 'bowl' | 'pairing-single' | 'pairing-two';
   diagnostics?: BowlDiagnosticOptions;
   animationCommand?: BowlAnimationCommand;
   onMetrics?: (metrics: BowlSceneMetrics) => void;
@@ -72,23 +73,47 @@ class GLBoundary extends Component<BoundaryProps, BoundaryState> {
   render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
 
-function BowlMesh({ diagnostics }: { diagnostics?: BowlDiagnosticOptions }) {
+function BowlMesh({ diagnostics, position = [0, -0.12, 0], scale = 1, muted = false, materialRef }: { diagnostics?: BowlDiagnosticOptions; position?: readonly [number, number, number]; scale?: number; muted?: boolean; materialRef?: RefObject<import('three').MeshPhysicalMaterial | null> }) {
   const geometry = useMemo(() => createBowlGeometry(), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
   if (diagnostics?.hideBowl) return null;
-  return <group position={[0, -0.12, 0]}>
+  return <group position={position} scale={scale}>
     <mesh geometry={geometry} receiveShadow castShadow renderOrder={1}>
       {diagnostics?.unlit ? (
         <meshBasicMaterial color="#FFFFFF" wireframe={diagnostics.wireframe} side={THREE.DoubleSide} vertexColors />
       ) : (
-        <meshPhysicalMaterial color="#FFFFFF" wireframe={diagnostics?.wireframe} vertexColors roughness={0.84} metalness={0} clearcoat={0.025} clearcoatRoughness={0.9} side={THREE.DoubleSide} />
+        <meshPhysicalMaterial ref={materialRef} color="#FFFFFF" wireframe={diagnostics?.wireframe} vertexColors roughness={0.86} metalness={0} clearcoat={0.018} clearcoatRoughness={0.92} side={THREE.DoubleSide} transparent={muted} opacity={muted ? 0.62 : 1} />
       )}
     </mesh>
     <mesh position={[0, 0.18, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[1.18, 0.78, 1]} renderOrder={2}>
       <circleGeometry args={[0.48, 48]} />
-      <meshBasicMaterial color="#B9AA98" transparent opacity={0.075} depthWrite={false} />
+      <meshBasicMaterial color="#D2C4B5" transparent opacity={0.16} depthWrite={false} />
     </mesh>
   </group>;
+}
+
+function SecondaryBowl({ diagnostics, reducedMotion }: { diagnostics?: BowlDiagnosticOptions; reducedMotion: boolean }) {
+  const group = useRef<import('three').Group>(null);
+  const material = useRef<import('three').MeshPhysicalMaterial>(null);
+  const elapsed = useRef(0);
+  const settled = useRef(reducedMotion);
+  const { invalidate } = useThree();
+  useEffect(() => {
+    if (group.current) { group.current.position.set(0.92, -0.2, reducedMotion ? -0.7 : -1.18); group.current.scale.setScalar(reducedMotion ? 1 : 0.94); }
+    if (material.current) material.current.opacity = reducedMotion ? 0.62 : 0;
+    if (!reducedMotion) invalidate();
+  }, [invalidate, reducedMotion]);
+  useFrame((_state, delta) => {
+    if (settled.current || !group.current) return;
+    elapsed.current += Math.min(delta, 1 / 20);
+    const progress = Math.min(1, elapsed.current / 0.65);
+    const eased = progress * progress * (3 - 2 * progress);
+    group.current.position.z = THREE.MathUtils.lerp(-1.18, -0.7, eased);
+    group.current.scale.setScalar(THREE.MathUtils.lerp(0.94, 1, eased));
+    if (material.current) material.current.opacity = 0.62 * eased;
+    if (progress >= 1) settled.current = true; else invalidate();
+  });
+  return <group ref={group}><BowlMesh diagnostics={diagnostics} scale={0.56} muted materialRef={material} /></group>;
 }
 
 function Atmosphere({ environment }: { environment: BowlEnvironment }) {
@@ -102,7 +127,7 @@ function Atmosphere({ environment }: { environment: BowlEnvironment }) {
     <shaderMaterial
       uniforms={uniforms}
       vertexShader="varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,1.0,1.0); }"
-      fragmentShader="uniform vec3 edgeColor; uniform vec3 centerColor; uniform vec3 hazeColor; varying vec2 vUv; void main(){ float d=distance(vUv,vec2(0.5)); float centre=1.0-smoothstep(0.08,0.66,d); float haze=(1.0-smoothstep(0.0,0.32,d))*0.16; vec3 color=mix(edgeColor,centerColor,centre); color=mix(color,hazeColor,haze); gl_FragColor=vec4(color,1.0); }"
+      fragmentShader="uniform vec3 edgeColor; uniform vec3 centerColor; uniform vec3 hazeColor; varying vec2 vUv; void main(){ vec3 vertical=mix(hazeColor,edgeColor,smoothstep(0.0,1.0,vUv.y)); float d=distance(vUv,vec2(0.5,0.55)); float pearl=1.0-smoothstep(0.06,0.72,d); vec3 color=mix(vertical,centerColor,pearl*0.88); gl_FragColor=vec4(color,1.0); }"
       depthWrite={false}
       depthTest={false}
     />
@@ -306,13 +331,13 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
   return <group ref={group} position={slot.position} rotation={slot.rotation} scale={slot.scale} renderOrder={10 + slot.layer}>
     <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.82, 0.58, 1]} renderOrder={7 + slot.layer}>
       <circleGeometry args={[0.47, 28]} />
-      <meshBasicMaterial color="#46504E" transparent opacity={0.3} depthWrite={false} />
+      <meshBasicMaterial color="#747A75" transparent opacity={0.22} depthWrite={false} />
     </mesh>
     <mesh geometry={geometry} castShadow receiveShadow onPointerDown={start} onPointerUp={end} onPointerOut={cancel} renderOrder={10 + slot.layer}>
       {diagnostics?.unlit ? (
         <meshBasicMaterial color="#FFFFFF" wireframe={diagnostics.wireframe} />
       ) : (
-        <meshPhysicalMaterial ref={material} color={pebble.incoming && !pebble.touched ? '#B9AFA3' : materialSpec.color} emissive={pebble.incoming && !pebble.touched ? '#554D45' : '#000000'} emissiveIntensity={pebble.incoming && !pebble.touched ? 0.08 : 0} roughness={materialSpec.roughness} metalness={0} clearcoat={materialSpec.clearcoat} clearcoatRoughness={0.86} transparent opacity={1} wireframe={diagnostics?.wireframe} />
+        <meshPhysicalMaterial ref={material} color={pebble.incoming && !pebble.touched ? '#B7AA9E' : materialSpec.color} emissive={pebble.incoming && !pebble.touched ? '#D3B7A5' : pebble.visualVariant === 5 ? '#AFC2B8' : '#000000'} emissiveIntensity={pebble.incoming && !pebble.touched ? 0.07 : pebble.visualVariant === 5 ? 0.035 : 0} roughness={materialSpec.roughness} metalness={0} clearcoat={materialSpec.clearcoat} clearcoatRoughness={0.88} transparent opacity={1} wireframe={diagnostics?.wireframe} />
       )}
     </mesh>
     <mesh position={[mark.x, 0.3, mark.z]} rotation={[-Math.PI / 2, 0, 0]} scale={[mark.scale, 0.48 * mark.scale, 1]} renderOrder={20 + slot.layer}>
@@ -359,7 +384,7 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
 
 type WorldProps = Omit<Props, 'forceFallback' | 'onMetrics'> & { onMetrics?: (metrics: CameraMetrics) => void };
 
-function World({ pebbles, environment, disabled = false, reducedMotion, diagnostics, animationCommand, onMetrics, onSend, onTouch }: WorldProps) {
+function World({ pebbles, environment, disabled = false, reducedMotion, diagnostics, animationCommand, composition = 'bowl', onMetrics, onSend, onTouch }: WorldProps) {
   const layout = getBowlLayout(pebbles.length);
   const { invalidate } = useThree();
   const [activeAnimations, setActiveAnimations] = useState<Map<string, MotionPhase>>(() => new Map());
@@ -376,12 +401,12 @@ function World({ pebbles, environment, disabled = false, reducedMotion, diagnost
   return <>
     <color attach="background" args={[environment.backgroundEdge]} />
     <Atmosphere environment={environment} />
-    <ambientLight intensity={diagnostics?.fixedWhiteLight ? 1.1 : bowlLighting.ambient} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : '#E7E5DE'} />
-    <directionalLight position={[-4, 6, 5]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.key} intensity={diagnostics?.fixedWhiteLight ? 1.4 : environment.keyIntensity} castShadow shadow-mapSize-width={diagnostics?.lowQuality ? 256 : 512} shadow-mapSize-height={diagnostics?.lowQuality ? 256 : 512} shadow-bias={-0.0004} />
-    <directionalLight position={[4, 3, -4]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.rim} intensity={diagnostics?.fixedWhiteLight ? 0.9 : environment.rimIntensity} />
-    <pointLight position={[0, 1.5, 2.4]} color="#D5C5B3" intensity={bowlLighting.fill} distance={8} decay={2} />
-    <BowlMesh diagnostics={diagnostics} />
-    {sortedPebbles.map((pebble, index) => <Stone key={pebble.id} pebble={pebble} slot={layout[index]} disabled={disabled || (activeAnimations.size > 0 && !activeAnimations.has(pebble.id))} reducedMotion={reducedMotion} diagnostics={diagnostics} debugCommand={pebble.id === diagnosticTarget ? animationCommand : undefined} onActivity={onActivity} onSend={onSend} onTouch={onTouch} />)}
+    <ambientLight intensity={diagnostics?.fixedWhiteLight ? 1.2 : bowlLighting.ambient} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : '#F1EEE7'} />
+    <directionalLight position={[-4, 6, 5]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.key} intensity={diagnostics?.fixedWhiteLight ? 1.2 : environment.keyIntensity} castShadow shadow-mapSize-width={diagnostics?.lowQuality ? 256 : 512} shadow-mapSize-height={diagnostics?.lowQuality ? 256 : 512} shadow-bias={-0.0004} />
+    <directionalLight position={[4, 3, -4]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.rim} intensity={diagnostics?.fixedWhiteLight ? 0.45 : environment.rimIntensity} />
+    <pointLight position={[0, 1.5, 2.4]} color="#D2CCC6" intensity={bowlLighting.fill} distance={8} decay={2} />
+    {composition === 'pairing-single' ? <BowlMesh diagnostics={diagnostics} scale={0.84} /> : composition === 'pairing-two' ? <><BowlMesh diagnostics={diagnostics} position={[-0.72, -0.08, 0.25]} scale={0.72} /><SecondaryBowl diagnostics={diagnostics} reducedMotion={reducedMotion} /></> : <BowlMesh diagnostics={diagnostics} />}
+    {composition === 'bowl' ? sortedPebbles.map((pebble, index) => <Stone key={pebble.id} pebble={pebble} slot={layout[index]} disabled={disabled || (activeAnimations.size > 0 && !activeAnimations.has(pebble.id))} reducedMotion={reducedMotion} diagnostics={diagnostics} debugCommand={pebble.id === diagnosticTarget ? animationCommand : undefined} onActivity={onActivity} onSend={onSend} onTouch={onTouch} />) : null}
     <CameraRig environment={environment} diagnostics={diagnostics} activeAnimations={activeAnimations} onMetrics={onMetrics} />
   </>;
 }
@@ -421,7 +446,7 @@ export function BowlScene(props: Props) {
       fallbackActive: Boolean(forceFallback || glTimedOut),
     });
   }, [cameraMetrics, forceFallback, glReady, glTimedOut, insets.bottom, insets.left, insets.right, insets.top, onMetrics, viewport, window.height, window.width]);
-  const fallback = <BowlFallback pebbles={props.pebbles} environment={props.environment} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} onSend={props.onSend} onTouch={props.onTouch} />;
+  const fallback = <BowlFallback pebbles={props.pebbles} environment={props.environment} composition={props.composition} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} onSend={props.onSend} onTouch={props.onTouch} />;
   const showFallback = Boolean(props.forceFallback || glTimedOut);
   return <View onLayout={onLayout} style={[styles.container, { backgroundColor: props.environment.backgroundEdge }]}>
     {viewport ? <View style={[styles.measuredLayer, { width: viewport.width, height: viewport.height }]}>
@@ -459,7 +484,7 @@ function CanvasLifecycleCounter() {
 }
 
 const styles = StyleSheet.create({
-  container: { width: '100%', alignSelf: 'stretch', flex: 1, minHeight: 300, position: 'relative', overflow: 'visible' },
+  container: { width: '100%', alignSelf: 'stretch', flex: 1, position: 'relative', overflow: 'visible' },
   measuredLayer: { position: 'absolute', top: 0, left: 0 },
   canvas: { position: 'absolute', top: 0, left: 0 },
   fallbackLayer: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },

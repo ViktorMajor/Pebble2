@@ -11,12 +11,12 @@ export function seededRandom(seed: number) {
   };
 }
 const PEBBLE_IDENTITIES = [
-  { color: '#B9BBB4', flattening: 0.54, width: 1.12, depth: 1.02, roughness: 0.84, clearcoat: 0.025 },
-  { color: '#A39A91', flattening: 0.66, width: 1.01, depth: 1.02, roughness: 0.8, clearcoat: 0.035 },
-  { color: '#737B7C', flattening: 0.59, width: 1.18, depth: 0.82, roughness: 0.86, clearcoat: 0.02 },
-  { color: '#929E97', flattening: 0.62, width: 1.05, depth: 0.98, roughness: 0.83, clearcoat: 0.025 },
-  { color: '#AAABA5', flattening: 0.58, width: 1.08, depth: 1.04, roughness: 0.81, clearcoat: 0.035 },
-  { color: '#C1C4BE', flattening: 0.6, width: 0.93, depth: 0.91, roughness: 0.78, clearcoat: 0.04 },
+  { color: '#C8C2B5', flattening: 0.54, width: 1.12, depth: 1.02, roughness: 0.86, clearcoat: 0.018 },
+  { color: '#8FA097', flattening: 0.66, width: 1.01, depth: 1.02, roughness: 0.83, clearcoat: 0.022 },
+  { color: '#AA9588', flattening: 0.59, width: 1.18, depth: 0.82, roughness: 0.87, clearcoat: 0.016 },
+  { color: '#7F8B89', flattening: 0.62, width: 1.05, depth: 0.98, roughness: 0.85, clearcoat: 0.018 },
+  { color: '#D0CCC1', flattening: 0.58, width: 1.08, depth: 1.04, roughness: 0.84, clearcoat: 0.022 },
+  { color: '#68716F', flattening: 0.6, width: 0.93, depth: 0.91, roughness: 0.82, clearcoat: 0.025 },
 ] as const;
 
 export function createPebbleGeometry(seed: number, visualVariant: number, detail = 2) {
@@ -92,9 +92,9 @@ export function createBowlGeometry() {
   geometry.computeVertexNormals();
   const normals = geometry.getAttribute('normal') as import('three').BufferAttribute;
   const vertexColors = new Float32Array(positions.count * 3);
-  const outside = new THREE.Color('#626B6B');
-  const inside = new THREE.Color('#7A817D');
-  const rim = new THREE.Color('#8B918C');
+  const outside = new THREE.Color('#9B9D95');
+  const inside = new THREE.Color('#B9B9AE');
+  const rim = new THREE.Color('#D0CDC1');
   const mixed = new THREE.Color();
   for (let index = 0; index < positions.count; index += 1) {
     const y = positions.getY(index);

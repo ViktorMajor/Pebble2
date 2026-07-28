@@ -6,10 +6,10 @@ import { getBowlLayout } from './bowlLayouts';
 import type { BowlEnvironment } from './bowlEnvironment';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 
-type Props = { pebbles: HeldPebble[]; environment: BowlEnvironment; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
-const FALLBACK_COLORS = ['#B9BBB4', '#A39A91', '#737B7C', '#929E97', '#AAABA5', '#C1C4BE'];
+type Props = { pebbles: HeldPebble[]; environment: BowlEnvironment; composition?: 'bowl' | 'pairing-single' | 'pairing-two'; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
+const FALLBACK_COLORS = ['#C8C2B5', '#8FA097', '#AA9588', '#7F8B89', '#D0CCC1', '#68716F'];
 
-export function BowlFallback({ pebbles, environment, disabled, reducedMotion, onSend, onTouch }: Props) {
+export function BowlFallback({ pebbles, environment, composition = 'bowl', disabled, reducedMotion, onSend, onTouch }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completed = useRef(false);
   const [travel] = useState(() => new Animated.Value(0));
@@ -54,7 +54,7 @@ export function BowlFallback({ pebbles, environment, disabled, reducedMotion, on
 
   return <View style={[styles.scene, { backgroundColor: environment.backgroundEdge }]} onLayout={(event) => setSceneWidth(event.nativeEvent.layout.width)}>
     <View pointerEvents="none" style={[styles.haze, { backgroundColor: environment.backgroundCenter }]} />
-    <View style={[styles.bowl, { width: bowlWidth, height: bowlHeight, marginLeft: -bowlWidth / 2, marginTop: -bowlHeight * 0.42 }]}>
+    <View style={[styles.bowl, composition !== 'bowl' && styles.pairingBowl, { width: bowlWidth, height: bowlHeight, marginLeft: -bowlWidth / 2, marginTop: -bowlHeight * 0.42 }]}>
       <View style={styles.backRim} />
       <View style={styles.inside} />
       {pebbles.map((pebble, index) => {
@@ -74,17 +74,20 @@ export function BowlFallback({ pebbles, environment, disabled, reducedMotion, on
       })}
       <View pointerEvents="none" style={styles.frontRim} />
     </View>
+    {composition === 'pairing-two' ? <View pointerEvents="none" style={[styles.secondBowl, { width: bowlWidth * 0.56, height: bowlHeight * 0.56 }]}><View style={styles.backRim} /><View style={styles.inside} /><View style={styles.frontRim} /></View> : null}
   </View>;
 }
 
 const styles = StyleSheet.create({
-  scene: { flex: 1, minHeight: 340, overflow: 'hidden', backgroundColor: colors.atmosphere },
-  haze: { position: 'absolute', left: '-12%', right: '-12%', top: '16%', height: '64%', borderRadius: 999, backgroundColor: colors.atmosphereCentre, opacity: 0.94 },
+  scene: { width: '100%', alignSelf: 'stretch', flex: 1, overflow: 'hidden', backgroundColor: colors.atmosphere },
+  haze: { position: 'absolute', left: '-12%', right: '-12%', top: '16%', height: '64%', borderRadius: 999, backgroundColor: colors.atmosphereCentre, opacity: 0.9 },
   bowl: { position: 'absolute', left: '50%', top: '58%' },
+  pairingBowl: { transform: [{ scale: 0.84 }] },
+  secondBowl: { position: 'absolute', right: '6%', top: '54%', opacity: 0.62 },
   backRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 15, borderColor: colors.bowlRim, backgroundColor: colors.bowlInside },
-  inside: { position: 'absolute', left: '8%', right: '8%', top: '15%', bottom: '19%', borderRadius: 999, backgroundColor: '#717B79' },
-  frontRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 15, borderTopColor: 'transparent', borderLeftColor: colors.bowlOutside, borderRightColor: colors.bowlOutside, borderBottomColor: '#566161' },
+  inside: { position: 'absolute', left: '8%', right: '8%', top: '15%', bottom: '19%', borderRadius: 999, backgroundColor: colors.bowlInside },
+  frontRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 15, borderTopColor: 'transparent', borderLeftColor: colors.bowlOutside, borderRightColor: colors.bowlOutside, borderBottomColor: '#8B8F89' },
   pebbleWrap: { position: 'absolute', marginLeft: -30, marginTop: -21, width: 60, height: 46 },
-  contactShadow: { position: 'absolute', left: 3, right: 3, bottom: -7, height: 19, borderRadius: 20, backgroundColor: '#46504E', opacity: 0.42 },
-  pebble: { width: 60, height: 43, borderRadius: 30, borderWidth: 1, borderColor: '#D0D3CE', shadowColor: '#243034', shadowOpacity: 0.36, shadowRadius: 8, elevation: 5 },
+  contactShadow: { position: 'absolute', left: 3, right: 3, bottom: -7, height: 19, borderRadius: 20, backgroundColor: colors.contact, opacity: 0.25 },
+  pebble: { width: 60, height: 43, borderRadius: 30, borderWidth: 1, borderColor: '#DDD9CF', shadowColor: colors.contact, shadowOpacity: 0.22, shadowRadius: 8, elevation: 4 },
 });

@@ -1,20 +1,28 @@
+import { luminousEnvironment } from './environmentTokens';
+
 export const colors = {
-  atmosphere: '#182126',
-  atmosphereCentre: '#27343A',
-  atmosphereLifted: '#314147',
-  bowlOutside: '#626B6B',
-  bowlInside: '#7A817D',
-  bowlRim: '#8B918C',
-  warmKey: '#CFC4B8',
-  coolRim: '#BAC5C6',
-  textPrimary: '#F0ECE4',
-  textSubdued: '#BFC5C2',
-  textFunctional: '#D9DDDA',
-  textMuted: '#929B98',
-  error: '#D7A39A',
-  surface: '#222D32',
-  border: '#465359',
-  pressed: '#344248',
+  atmosphere: luminousEnvironment.upperMist,
+  atmosphereCentre: luminousEnvironment.centralPearl,
+  atmosphereLifted: luminousEnvironment.lowerMineral,
+  bowlOutside: luminousEnvironment.bowlExterior,
+  bowlInside: luminousEnvironment.bowlInterior,
+  bowlRim: luminousEnvironment.bowlRim,
+  warmKey: luminousEnvironment.warmAccent,
+  coolRim: luminousEnvironment.coolAccent,
+  textPrimary: luminousEnvironment.textPrimary,
+  relationalPrimary: luminousEnvironment.relationalPrimary,
+  textSubdued: luminousEnvironment.textSecondary,
+  textFunctional: luminousEnvironment.textPrimary,
+  textMuted: luminousEnvironment.textMuted,
+  error: luminousEnvironment.error,
+  surface: luminousEnvironment.elevatedSurface,
+  surfaceSecondary: luminousEnvironment.secondarySurface,
+  border: luminousEnvironment.border,
+  pressed: luminousEnvironment.sagePressed,
+  primary: luminousEnvironment.sage,
+  primaryPressed: luminousEnvironment.sagePressed,
+  contact: luminousEnvironment.contactTone,
+  reflectedInterior: luminousEnvironment.reflectedInterior,
 } as const;
 
 export const fonts = {
@@ -34,7 +42,7 @@ export const typography = {
   functionalSecondary: { fontFamily: fonts.system, fontSize: 15, lineHeight: 21 },
 } as const;
 export const motion = { pickup: 210, quick: 180, settle: 460, travel: 820, arrival: 920, caption: 420, captionDelay: 340 } as const;
-export const bowlLighting = { exposure: 1.12, ambient: 0.78, key: 1.16, rim: 0.72, fill: 0.44, maxVignette: 0.12 } as const;
-export const bowlLuminanceTargets = { edge: 1, centre: 1.28, bowlOuter: 1.76, bowlInner: 2.02, pebbleLitFace: 2.58, contactShadowFloor: 0.6, rimHighlightMaximum: 1.25 } as const;
-export const opacity = { quiet: 0.58, secondary: 0.76, disabled: 0.42 } as const;
+export const bowlLighting = { exposure: 1.22, ambient: 1.25, key: 1.05, rim: 0.26, fill: 0.75, maxVignette: 0 } as const;
+export const bowlLuminanceTargets = { backgroundMinimum: 0.45, bowlSeparation: 1.16, pebbleSeparation: 1.12, contactShadowFloor: 0.72, rimHighlightMaximum: 1.18 } as const;
+export const opacity = { quiet: 0.68, secondary: 0.82, disabled: 0.56 } as const;
 export const MIN_TOUCH_TARGET = 48;
