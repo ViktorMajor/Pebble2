@@ -52,7 +52,11 @@ export function GLLayoutProbeScreen() {
       <Text style={styles.metric}>Canvas RN blue {format(metrics?.canvasWidth ?? 0)} × {format(metrics?.canvasHeight ?? 0)}</Text>
       <Text style={styles.metric}>R3F size {format(metrics?.r3fWidth ?? 0)} × {format(metrics?.r3fHeight ?? 0)}</Text>
       <Text style={styles.metric}>GL buffer {format(metrics?.glDrawingBufferWidth ?? 0)} × {format(metrics?.glDrawingBufferHeight ?? 0)}</Text>
-      <Text style={styles.metric}>Pixel ratio {format(metrics?.devicePixelRatio ?? PixelRatio.get())}</Text>
+      <Text style={styles.metric}>Native DPR {format(metrics?.nativeSurfacePixelRatio ?? PixelRatio.get())}</Text>
+      <Text style={styles.metric}>Renderer DPR {format(metrics?.rendererPixelRatio ?? 0)}</Text>
+      <Text style={styles.metric}>Expo GL buffer {format(metrics?.expoGLDrawingBufferWidth ?? 0)} × {format(metrics?.expoGLDrawingBufferHeight ?? 0)}</Text>
+      <Text style={styles.metric}>Renderer buffer {format(metrics?.rendererDrawingBufferWidth ?? 0)} × {format(metrics?.rendererDrawingBufferHeight ?? 0)}</Text>
+      <Text style={styles.metric}>Native surface {metrics?.completeNativeSurfaceCovered ? 'complete' : 'mismatch'}</Text>
       <Text style={styles.metric}>Camera aspect {format(metrics?.cameraAspectRatio ?? 0)}</Text>
       <Text style={styles.metric}>Renderer mounts {metrics?.rendererMounts ?? 0}</Text>
       <Text style={styles.metric}>Status {status}</Text>

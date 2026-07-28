@@ -25,7 +25,7 @@ test('probe uses three deterministic mock pebbles and no application data', () =
 });
 
 test('probe exposes every independent layout layer and renderer measurement', () => {
-  for (const label of ['Window', 'Root red', 'Bowl parent green', 'Canvas RN blue', 'R3F size', 'GL buffer', 'Pixel ratio', 'Camera aspect', 'Renderer mounts', 'Status']) {
+  for (const label of ['Window', 'Root red', 'Bowl parent green', 'Canvas RN blue', 'R3F size', 'GL buffer', 'Native DPR', 'Renderer DPR', 'Expo GL buffer', 'Renderer buffer', 'Native surface', 'Camera aspect', 'Renderer mounts', 'Status']) {
     assert.match(screen, new RegExp(label));
   }
   assert.match(scene, /onCanvasLayout/);

@@ -109,6 +109,7 @@ test('development note records source inspection, interpretations, and verificat
   assert.match(note, /dpr: PixelRatio\.get\(\)/);
   for (const outcome of ['Outcome 1', 'Outcome 2', 'Outcome 3', 'Outcome 4']) assert.match(note, new RegExp(outcome));
   assert.match(note, /Raw GLView Probe: Device-verified by user/);
-  assert.match(note, /Current R3F Canvas rendering: Failed physical verification/);
-  assert.match(note, /New R3F Viewport Probe: Implemented, not device-verified/);
+  assert.match(note, /R3F native DPR: Device-verified by user/);
+  assert.match(note, /R3F capped DPR 1\.35: Failed physical verification/);
+  assert.match(note, /Production BowlScene repair: Implemented, not device-verified/);
 });

@@ -9,6 +9,7 @@ import { BOWL_WORLD_BOUNDS, calculateBowlFraming, CAMERA_LOOK_AT, measuredBowlVi
 import { getBowlLayout } from './bowlLayouts';
 import type { BowlEnvironment } from './bowlEnvironment';
 import { BowlFallback } from './BowlFallback';
+import { validateNativeSurface } from './nativeSurfaceValidation';
 import { createBowlGeometry, createPebbleGeometry, pebbleMaterial, seededRandom } from './proceduralPebble';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 import { THREE } from './threeRuntime';
@@ -33,6 +34,16 @@ export type BowlSceneMetrics = {
   r3fHeight: number;
   glDrawingBufferWidth: number;
   glDrawingBufferHeight: number;
+  nativeSurfacePixelRatio: number;
+  rendererPixelRatio: number;
+  expoGLDrawingBufferWidth: number;
+  expoGLDrawingBufferHeight: number;
+  rendererDrawingBufferWidth: number;
+  rendererDrawingBufferHeight: number;
+  rendererViewport: string;
+  rendererScissor: string;
+  rendererScissorTest: boolean;
+  completeNativeSurfaceCovered: boolean;
   devicePixelRatio: number;
   cameraAspectRatio: number;
   windowWidth: number;
@@ -145,6 +156,9 @@ type CameraMetrics = Pick<BowlSceneMetrics,
   'projectedWidthPercent' | 'sideMargin' | 'bowlBounds' | 'cameraDistance' | 'exposure' |
   'keyIntensity' | 'rimIntensity' | 'activeFrameLoop' | 'activeAnimation' | 'r3fWidth' |
   'r3fHeight' | 'glDrawingBufferWidth' | 'glDrawingBufferHeight' | 'cameraAspectRatio'
+  | 'nativeSurfacePixelRatio' | 'rendererPixelRatio' | 'expoGLDrawingBufferWidth' |
+  'expoGLDrawingBufferHeight' | 'rendererDrawingBufferWidth' | 'rendererDrawingBufferHeight' |
+  'rendererViewport' | 'rendererScissor' | 'rendererScissorTest' | 'completeNativeSurfaceCovered'
 >;
 
 function quadraticBezier(
@@ -370,24 +384,47 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
     camera.lookAt(...CAMERA_LOOK_AT);
     camera.updateProjectionMatrix();
     set({ camera });
-    gl.setPixelRatio(Math.min(PixelRatio.get(), diagnostics?.lowQuality ? 1 : 1.35));
-    const drawingBuffer = gl.getDrawingBufferSize(new THREE.Vector2());
-    onMetrics?.({
-      projectedWidthPercent: framing.projectedWidthRatio * 100,
-      sideMargin: framing.sideMargin,
-      bowlBounds: `${BOWL_WORLD_BOUNDS.min.join(',')} → ${BOWL_WORLD_BOUNDS.max.join(',')}`,
-      cameraDistance: framing.cameraDistance,
-      exposure: bowlLighting.exposure,
-      keyIntensity: environment.keyIntensity,
-      rimIntensity: environment.rimIntensity,
-      activeFrameLoop: activeAnimations.size > 0,
-      activeAnimation: [...activeAnimations.values()].join(', ') || 'rest',
-      r3fWidth: size.width,
-      r3fHeight: size.height,
-      glDrawingBufferWidth: drawingBuffer.x,
-      glDrawingBufferHeight: drawingBuffer.y,
-      cameraAspectRatio,
-    });
+    if (onMetrics) {
+      const context = gl.getContext();
+      const rendererBuffer = gl.getDrawingBufferSize(new THREE.Vector2());
+      const rendererViewport = gl.getViewport(new THREE.Vector4());
+      const rendererScissor = gl.getScissor(new THREE.Vector4());
+      const surface = validateNativeSurface({
+        logicalSize: { width: size.width, height: size.height },
+        expoBuffer: { width: context.drawingBufferWidth, height: context.drawingBufferHeight },
+        rendererBuffer: { width: rendererBuffer.x, height: rendererBuffer.y },
+        rendererPixelRatio: gl.getPixelRatio(),
+        rendererViewport: { x: rendererViewport.x, y: rendererViewport.y, width: rendererViewport.z, height: rendererViewport.w },
+        rendererScissor: { x: rendererScissor.x, y: rendererScissor.y, width: rendererScissor.z, height: rendererScissor.w },
+        scissorTest: gl.getScissorTest(),
+      });
+      onMetrics({
+        projectedWidthPercent: framing.projectedWidthRatio * 100,
+        sideMargin: framing.sideMargin,
+        bowlBounds: `${BOWL_WORLD_BOUNDS.min.join(',')} → ${BOWL_WORLD_BOUNDS.max.join(',')}`,
+        cameraDistance: framing.cameraDistance,
+        exposure: bowlLighting.exposure,
+        keyIntensity: environment.keyIntensity,
+        rimIntensity: environment.rimIntensity,
+        activeFrameLoop: activeAnimations.size > 0,
+        activeAnimation: [...activeAnimations.values()].join(', ') || 'rest',
+        r3fWidth: size.width,
+        r3fHeight: size.height,
+        glDrawingBufferWidth: surface.rendererBuffer.width,
+        glDrawingBufferHeight: surface.rendererBuffer.height,
+        nativeSurfacePixelRatio: surface.nativeSurfacePixelRatio,
+        rendererPixelRatio: surface.rendererPixelRatio,
+        expoGLDrawingBufferWidth: surface.expoBuffer.width,
+        expoGLDrawingBufferHeight: surface.expoBuffer.height,
+        rendererDrawingBufferWidth: surface.rendererBuffer.width,
+        rendererDrawingBufferHeight: surface.rendererBuffer.height,
+        rendererViewport: `${surface.rendererViewport.x},${surface.rendererViewport.y} ${surface.rendererViewport.width}×${surface.rendererViewport.height}`,
+        rendererScissor: `${surface.rendererScissor.x},${surface.rendererScissor.y} ${surface.rendererScissor.width}×${surface.rendererScissor.height}`,
+        rendererScissorTest: surface.scissorTest,
+        completeNativeSurfaceCovered: surface.completeNativeSurfaceCovered,
+        cameraAspectRatio,
+      });
+    }
     invalidate();
   }, [activeAnimations, diagnostics, environment.keyIntensity, environment.rimIntensity, gl, invalidate, onMetrics, set, size.height, size.width]);
   if (!diagnostics?.cameraHelper) return null;
@@ -465,6 +502,16 @@ export function BowlScene(props: Props) {
       r3fHeight: 0,
       glDrawingBufferWidth: 0,
       glDrawingBufferHeight: 0,
+      nativeSurfacePixelRatio: 0,
+      rendererPixelRatio: 0,
+      expoGLDrawingBufferWidth: 0,
+      expoGLDrawingBufferHeight: 0,
+      rendererDrawingBufferWidth: 0,
+      rendererDrawingBufferHeight: 0,
+      rendererViewport: '',
+      rendererScissor: '',
+      rendererScissorTest: false,
+      completeNativeSurfaceCovered: false,
       cameraAspectRatio: 0,
     };
     onMetrics?.({
@@ -500,7 +547,6 @@ export function BowlScene(props: Props) {
             mountedCanvasInstances += 1;
             rendererMountCount += 1;
             gl.setClearColor(props.environment.backgroundEdge, 1);
-            gl.setPixelRatio(Math.min(PixelRatio.get(), props.diagnostics?.lowQuality ? 1 : 1.35));
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = bowlLighting.exposure;
             gl.outputColorSpace = THREE.SRGBColorSpace;
@@ -509,7 +555,7 @@ export function BowlScene(props: Props) {
           }}
           onPointerMissed={() => undefined}
         >
-          <World {...props} onMetrics={setCameraMetrics} />
+          <World {...props} onMetrics={onMetrics ? setCameraMetrics : undefined} />
           <CanvasLifecycleCounter />
         </Canvas>
       </GLBoundary> : null}

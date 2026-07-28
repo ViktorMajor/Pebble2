@@ -162,6 +162,11 @@ export function BowlLabScreen() {
         <Metric label="Frame loop" value={metrics.activeFrameLoop ? 'active' : 'resting'} />
         <Metric label="Canvas instances" value={metrics.canvasInstances} />
         <Metric label="Renderer mounts" value={metrics.rendererMounts} />
+        <Metric label="Native / renderer DPR" value={`${metrics.nativeSurfacePixelRatio.toFixed(3)} / ${metrics.rendererPixelRatio.toFixed(3)}`} />
+        <Metric label="Expo GL buffer" value={`${metrics.expoGLDrawingBufferWidth.toFixed(0)} × ${metrics.expoGLDrawingBufferHeight.toFixed(0)}`} />
+        <Metric label="Renderer buffer" value={`${metrics.rendererDrawingBufferWidth.toFixed(0)} × ${metrics.rendererDrawingBufferHeight.toFixed(0)}`} />
+        <Metric label="Viewport / scissor" value={`${metrics.rendererViewport} / ${metrics.rendererScissorTest ? metrics.rendererScissor : 'disabled'}`} />
+        <Metric label="Native surface" value={metrics.completeNativeSurfaceCovered ? 'complete' : 'mismatch'} />
         <Metric label="Renderer" value={metrics.fallbackActive ? 'fallback' : metrics.glReady ? 'GL ready' : 'loading'} />
         <Metric label="Animation" value={metrics.activeAnimation} />
       </View> : null}

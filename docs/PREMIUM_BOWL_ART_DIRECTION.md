@@ -36,7 +36,7 @@ Layouts zero through six are explicit. The initial three form a loose asymmetric
 
 ## Composition and camera
 
-The renderer uses a measured full-size architecture: a `width: 100%`, stretching, relative parent validates finite non-zero `onLayout` dimensions before creating Expo GL. Canvas and fallback then receive the same explicit absolute bounds. Flex alone is insufficient because the Android native GL surface can retain an intrinsic partial width even while its React Native ancestors appear flexible.
+The renderer uses a measured full-size architecture: a `width: 100%`, stretching, relative parent validates finite non-zero `onLayout` dimensions before creating Expo GL. Canvas and fallback then receive the same explicit absolute bounds. Physical probes later established that the former partial-width image was not a React Native layout failure: it was a renderer/native-buffer DPR mismatch.
 
 The former “74%” diagnostic was misleading because it described the bowl relative to that undersized GL surface, not the phone's intended scene area. Metrics now report parent, Canvas, window, Safe Area, and aspect dimensions together. The camera uses the validated Canvas viewport. A 40-degree vertical perspective camera sits at a 41-degree downward angle. Distance is derived from the 3.84-world-unit bowl diameter and current horizontal field of view, targeting 74% of safe width. The acceptable normal range is 70–78%, never above 80%, with at least 24 logical pixels on each side; the margin constraint wins on exceptionally small viewports.
 
@@ -84,7 +84,7 @@ The pebble gesture has screen-reader buttons with long-press transfer and tap-to
 
 ## Renderer and Expo GL boundary
 
-One React Three Fiber native Canvas uses Expo GL, basic shadow maps, ACES tone mapping, sRGB output, exposure `1.22`, and pixel ratio capped at `1.35` (`1.0` in low-quality diagnostics). Three.js is pinned to r182 because current R3F 9.6.1 still constructs `Clock`; r183+ reports that internal dependency as deprecated. `npm ls` must resolve one deduplicated Three instance.
+One React Three Fiber native Canvas uses Expo GL, basic shadow maps, ACES tone mapping, sRGB output, exposure `1.22`, and the native Expo GL surface DPR selected by R3F. Expo GL creates its native drawing surface at approximately device DPR; reducing only Three.js DPR leaves that native surface unchanged and renders into a partial lower-resolution viewport. Low-quality diagnostics therefore reduce shadow-map cost instead of renderer DPR. Three.js is pinned to r182 because current R3F 9.6.1 still constructs `Clock`; r183+ reports that internal dependency as deprecated. `npm ls` must resolve one deduplicated Three instance.
 
 Expo GL does not implement every browser WebGL `pixelStorei` enum that Three calls while resetting renderer state. Pebble configures no textures and does not monkey-patch console or GL. Harmless initialization messages for unsupported reset-only enums may remain until Expo GL implements them; `UNPACK_FLIP_Y_WEBGL` and `UNPACK_ALIGNMENT` are supported. This limitation must never be hidden or mistaken for a missing-material failure.
 
