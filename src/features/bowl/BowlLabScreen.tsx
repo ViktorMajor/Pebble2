@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,7 +70,6 @@ function ConnectionInspector({ pairId }: { pairId: string | null }) {
 }
 
 export function BowlLabScreen() {
-  const router = useRouter();
   const appSession = useAppSession();
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -107,15 +105,11 @@ export function BowlLabScreen() {
     touched: index === count - 1 && incoming ? touched : true,
   })), [count, incoming, touched]);
   const baseEnvironment = getBowlEnvironment(new Date(2026, month, 15, phase));
-  const environment = maximumDarkness ? { ...baseEnvironment, backgroundCenter: '#202B30', backgroundHaze: '#28363C', keyIntensity: 1, rimIntensity: 0.68 } : baseEnvironment;
+  const environment = maximumDarkness ? { ...baseEnvironment, backgroundEdge: '#A6B3B6', backgroundCenter: '#BEC6C4', backgroundHaze: '#C1B6AE', textPrimary: '#26302E', keyIntensity: 0.95, rimIntensity: 0.22 } : baseEnvironment;
   const diagnostics = useMemo<BowlDiagnosticOptions>(() => ({ wireframe, unlit, hideBowl, hidePebbles, fixedWhiteLight: whiteLight, cameraHelper, lowQuality }), [cameraHelper, hideBowl, hidePebbles, lowQuality, unlit, whiteLight, wireframe]);
   const animate = (mode: BowlAnimationCommand['mode']) => setCommand((current) => ({ mode, nonce: current.nonce + 1 }));
 
-  return <SafeAreaView style={styles.safe}>
-    <View style={styles.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable>
-      <View><Text accessibilityRole="header" style={styles.title}>Bowl Lab</Text><Text style={styles.subtitle}>Development workbench</Text></View>
-    </View>
+  return <SafeAreaView edges={['left', 'right']} style={styles.safe}>
     <View style={[styles.preview, { height: previewHeight }]}>
       <BowlScene pebbles={pebbles} environment={environment} reducedMotion={reduced} forceFallback={fallback} diagnostics={diagnostics} animationCommand={command} onMetrics={setMetrics} onSend={async () => setCount((value) => Math.max(0, value - 1))} onTouch={async () => setTouched(true)} />
       {safeOverlay ? <View pointerEvents="none" style={styles.safeOverlay} /> : null}
@@ -185,11 +179,6 @@ export function BowlLabScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.atmosphere },
-  header: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  back: { width: MIN_TOUCH_TARGET, height: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
-  backText: { ...typography.relationalSecondary, color: colors.textPrimary, fontSize: 32 },
-  title: { ...typography.functionalPrimary, color: colors.textPrimary },
-  subtitle: { ...typography.functionalSecondary, color: colors.textMuted, fontSize: 13 },
   preview: { width: '100%', alignSelf: 'stretch', minHeight: 300, position: 'relative', backgroundColor: colors.atmosphere },
   safeOverlay: { position: 'absolute', top: 24, right: 24, bottom: 24, left: 24, borderWidth: 1, borderColor: '#D7A39A' },
   controls: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
