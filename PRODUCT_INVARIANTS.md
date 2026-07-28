@@ -1,5 +1,7 @@
 # Pebble Product Invariants
 
+> **Authority notice:** This is a legacy implementation-oriented invariant summary. [The Pebble Product Constitution](docs/PRODUCT_CONSTITUTION.md) is the authoritative product source, followed by [Design Principles](docs/DESIGN_PRINCIPLES.md) and the [Decision Log](docs/DECISION_LOG.md). If this file conflicts with a higher-authority document, the higher document wins.
+
 Any implementation that violates these invariants is incorrect even if it satisfies another feature request.
 
 P1. A connection contains exactly two people when complete and never more than two.

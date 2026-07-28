@@ -1,5 +1,7 @@
 # Pebble Architecture
 
+> **Authority notice:** This technical document is subordinate to the [Product Constitution](docs/PRODUCT_CONSTITUTION.md), [Design Principles](docs/DESIGN_PRINCIPLES.md), and [Decision Log](docs/DECISION_LOG.md).
+
 Pebble is an Expo SDK 57 / React Native application using strict TypeScript, Expo Router, Supabase, and a native GL presentation layer.
 
 ## Application structure
@@ -63,4 +65,4 @@ The permanent iOS/Android identifier is `io.github.viktormajor.pebble`. Expo GL,
 
 ## Product boundary
 
-The architecture must preserve `PRODUCT_INVARIANTS.md`: no chat, authored payload, reaction, partner inventory comparison, online status, exact touch/read time, response metric, streak, score, achievement, engagement reminder, discovery, feed, or relationship analytics.
+The architecture must preserve the authoritative [Product Constitution](docs/PRODUCT_CONSTITUTION.md). `PRODUCT_INVARIANTS.md` remains a legacy implementation-oriented summary.

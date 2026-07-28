@@ -1,5 +1,7 @@
 # Premium Bowl Art Direction
 
+> **Authority notice:** This document records the current detailed implementation direction. Stable experience rules are defined by [Design Principles](DESIGN_PRINCIPLES.md), and immutable product identity is defined by the [Product Constitution](PRODUCT_CONSTITUTION.md). Exact tokens, dimensions, renderer choices, and timings below are mutable.
+
 ## Six circulating objects
 
 Pebble is a private connection between exactly two people. A completed connection permanently owns exactly six physical-feeling pebble identities. Three begin with the creator and three with the joining member. They are created once, never regenerated, never reset, and never duplicated or destroyed while the connection is active. Sending transfers one specific identity; touching acknowledges its latest arrival without sending it back.
