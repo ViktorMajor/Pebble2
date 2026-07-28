@@ -1,41 +1,89 @@
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { colors } from '../../design/tokens';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { colors, motion } from '../../design/tokens';
 import { getBowlLayout } from './bowlLayouts';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 
 type Props = { pebbles: HeldPebble[]; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
+const FALLBACK_COLORS = ['#B9BBB4', '#A39A91', '#737B7C', '#929E97', '#AAABA5', '#C1C4BE'];
 
-export function BowlFallback({ pebbles, disabled, onSend, onTouch }: Props) {
+export function BowlFallback({ pebbles, disabled, reducedMotion, onSend, onTouch }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completed = useRef(false);
+  const [travel] = useState(() => new Animated.Value(0));
   const [busyId, setBusyId] = useState<string | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const [sceneWidth, setSceneWidth] = useState(360);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); travel.stopAnimation(); }, [travel]);
   const layout = getBowlLayout(pebbles.length);
+  const bowlWidth = Math.min(sceneWidth * 0.74, sceneWidth - 48);
+  const bowlHeight = bowlWidth * 0.52;
   const begin = (pebble: HeldPebble) => {
     if (disabled || busyId) return;
-    completed.current = false; setBusyId(pebble.id);
+    completed.current = false; setBusyId(pebble.id); travel.setValue(0);
     if (Platform.OS !== 'web') void Haptics.selectionAsync();
     timer.current = setTimeout(() => {
-      completed.current = true;
-      void onSend(pebble.id).finally(() => setBusyId(null));
+      timer.current = null; completed.current = true;
+      if (reducedMotion) {
+        void onSend(pebble.id).finally(() => setBusyId(null));
+        return;
+      }
+      Animated.timing(travel, { toValue: 1, duration: motion.travel, useNativeDriver: true }).start(({ finished }) => {
+        if (finished) void onSend(pebble.id).finally(() => { travel.setValue(0); setBusyId(null); });
+      });
     }, HOLD_DURATION_MS);
   };
   const end = (pebble: HeldPebble) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    if (!completed.current && pebble.incoming && !pebble.touched && pebble.transferEventId) void onTouch(pebble.transferEventId).finally(()=>setBusyId(null));
-    if (!completed.current) setBusyId(null);
+    if (!completed.current) {
+      Animated.timing(travel, { toValue: 0, duration: reducedMotion ? 0 : motion.pickup, useNativeDriver: true }).start();
+      if (pebble.incoming && !pebble.touched && pebble.transferEventId) void onTouch(pebble.transferEventId).finally(() => setBusyId(null));
+      else setBusyId(null);
+    }
   };
-  return <View style={styles.scene}>
-    <View style={styles.backRim} /><View style={styles.inside} />
-    {pebbles.map((pebble, index) => {
-      const item = layout[index]; if (!item) return null;
-      return <Pressable key={pebble.id} accessibilityRole="button" onPressIn={() => begin(pebble)} onPressOut={() => end(pebble)}
-        style={[styles.pebble, { left: `${50 + item.position[0] * 18}%`, top: `${55 - item.position[2] * 14 - item.position[1] * 9}%`, opacity: busyId === pebble.id ? 0.72 : 1, transform: [{ scale: item.scale }, { rotate: `${item.rotation[2]}rad` }], backgroundColor: pebble.incoming && !pebble.touched ? '#746A5D' : '#4F5452' }]} />;
-    })}
-    <View pointerEvents="none" style={styles.frontRim} />
+  const selectedTransform = useMemo(() => ({
+    transform: [
+      { translateY: travel.interpolate({ inputRange: [0, 1], outputRange: [-15, -190] }) },
+      { translateX: travel.interpolate({ inputRange: [0, 1], outputRange: [0, 28] }) },
+      { rotate: travel.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '7deg'] }) },
+    ],
+    opacity: travel.interpolate({ inputRange: [0, 0.78, 1], outputRange: [1, 1, 0] }),
+  }), [travel]);
+
+  return <View style={styles.scene} onLayout={(event) => setSceneWidth(event.nativeEvent.layout.width)}>
+    <View pointerEvents="none" style={styles.haze} />
+    <View style={[styles.bowl, { width: bowlWidth, height: bowlHeight, marginLeft: -bowlWidth / 2, marginTop: -bowlHeight * 0.42 }]}>
+      <View style={styles.backRim} />
+      <View style={styles.inside} />
+      {pebbles.map((pebble, index) => {
+        const item = layout[index]; if (!item) return null;
+        const isBusy = busyId === pebble.id;
+        return <Animated.View key={pebble.id} style={[styles.pebbleWrap, {
+          left: `${50 + item.position[0] * 25}%`,
+          top: `${47 - item.position[2] * 24 - (item.position[1] - 0.46) * 20}%`,
+          transform: [{ scale: item.scale }, { rotate: `${item.rotation[2]}rad` }, ...(isBusy ? selectedTransform.transform : [])],
+          opacity: isBusy ? selectedTransform.opacity : 1,
+        }]}>
+          <View style={styles.contactShadow} />
+          <Pressable accessibilityRole="button" onPressIn={() => begin(pebble)} onPressOut={() => end(pebble)} style={[styles.pebble, {
+            backgroundColor: pebble.incoming && !pebble.touched ? '#B9AFA3' : FALLBACK_COLORS[pebble.visualVariant] ?? FALLBACK_COLORS[0],
+          }]} />
+        </Animated.View>;
+      })}
+      <View pointerEvents="none" style={styles.frontRim} />
+    </View>
   </View>;
 }
-const styles=StyleSheet.create({scene:{flex:1,minHeight:340,overflow:'hidden'},backRim:{position:'absolute',left:'7%',right:'7%',top:'30%',height:'45%',borderRadius:999,borderWidth:18,borderColor:colors.bowlOutside,backgroundColor:colors.bowlInside},inside:{position:'absolute',left:'13%',right:'13%',top:'36%',height:'34%',borderRadius:999,backgroundColor:'#4A5053'},frontRim:{position:'absolute',left:'7%',right:'7%',top:'30%',height:'45%',borderRadius:999,borderWidth:18,borderTopColor:'transparent',borderLeftColor:colors.bowlOutside,borderRightColor:colors.bowlOutside,borderBottomColor:'#343A3E'},pebble:{position:'absolute',marginLeft:-30,marginTop:-20,width:60,height:43,borderRadius:30,borderWidth:1,borderColor:'#777B76',shadowColor:'#000',shadowOpacity:.32,shadowRadius:12}});
+
+const styles = StyleSheet.create({
+  scene: { flex: 1, minHeight: 340, overflow: 'hidden', backgroundColor: colors.atmosphere },
+  haze: { position: 'absolute', left: '-12%', right: '-12%', top: '16%', height: '64%', borderRadius: 999, backgroundColor: colors.atmosphereCentre, opacity: 0.94 },
+  bowl: { position: 'absolute', left: '50%', top: '58%' },
+  backRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 15, borderColor: colors.bowlRim, backgroundColor: colors.bowlInside },
+  inside: { position: 'absolute', left: '8%', right: '8%', top: '15%', bottom: '19%', borderRadius: 999, backgroundColor: '#717B79' },
+  frontRim: { position: 'absolute', inset: 0, borderRadius: 999, borderWidth: 15, borderTopColor: 'transparent', borderLeftColor: colors.bowlOutside, borderRightColor: colors.bowlOutside, borderBottomColor: '#566161' },
+  pebbleWrap: { position: 'absolute', marginLeft: -30, marginTop: -21, width: 60, height: 46 },
+  contactShadow: { position: 'absolute', left: 3, right: 3, bottom: -7, height: 19, borderRadius: 20, backgroundColor: '#46504E', opacity: 0.42 },
+  pebble: { width: 60, height: 43, borderRadius: 30, borderWidth: 1, borderColor: '#D0D3CE', shadowColor: '#243034', shadowOpacity: 0.36, shadowRadius: 8, elevation: 5 },
+});

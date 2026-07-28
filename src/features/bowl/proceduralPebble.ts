@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { THREE } from './threeRuntime';
 
 export function seededRandom(seed: number) {
   let value = seed >>> 0;
@@ -10,15 +10,25 @@ export function seededRandom(seed: number) {
     return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
   };
 }
-export function createPebbleGeometry(seed: number, detail = 2) {
+const PEBBLE_IDENTITIES = [
+  { color: '#B9BBB4', flattening: 0.54, width: 1.12, depth: 1.02, roughness: 0.84, clearcoat: 0.025 },
+  { color: '#A39A91', flattening: 0.66, width: 1.01, depth: 1.02, roughness: 0.8, clearcoat: 0.035 },
+  { color: '#737B7C', flattening: 0.59, width: 1.18, depth: 0.82, roughness: 0.86, clearcoat: 0.02 },
+  { color: '#929E97', flattening: 0.62, width: 1.05, depth: 0.98, roughness: 0.83, clearcoat: 0.025 },
+  { color: '#AAABA5', flattening: 0.58, width: 1.08, depth: 1.04, roughness: 0.81, clearcoat: 0.035 },
+  { color: '#C1C4BE', flattening: 0.6, width: 0.93, depth: 0.91, roughness: 0.78, clearcoat: 0.04 },
+] as const;
+
+export function createPebbleGeometry(seed: number, visualVariant: number, detail = 2) {
   const geometry = new THREE.IcosahedronGeometry(0.54, detail);
   const random = seededRandom(seed);
-  const positions = geometry.getAttribute('position') as THREE.BufferAttribute;
+  const identity = PEBBLE_IDENTITIES[Math.max(0, Math.min(5, Math.trunc(visualVariant)))] ?? PEBBLE_IDENTITIES[0];
+  const positions = geometry.getAttribute('position') as import('three').BufferAttribute;
   const point = new THREE.Vector3();
   const normal = new THREE.Vector3();
-  const flattening = 0.58 + random() * 0.12;
-  const width = 0.96 + random() * 0.18;
-  const depth = 0.9 + random() * 0.2;
+  const flattening = identity.flattening * (0.97 + random() * 0.06);
+  const width = identity.width * (0.97 + random() * 0.06);
+  const depth = identity.depth * (0.97 + random() * 0.06);
   const phases = [random() * 8, random() * 8, random() * 8];
   const dents = Array.from({ length: 3 }, () => ({
     direction: new THREE.Vector3(random() * 2 - 1, random() * 0.7 - 0.2, random() * 2 - 1).normalize(),
@@ -42,28 +52,35 @@ export function createPebbleGeometry(seed: number, detail = 2) {
   }
   geometry.computeVertexNormals();
   geometry.center();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  const bounds = geometry.boundingBox;
+  if (!bounds || !Number.isFinite(bounds.min.x + bounds.min.y + bounds.min.z + bounds.max.x + bounds.max.y + bounds.max.z)) {
+    geometry.dispose();
+    throw new Error('Invalid procedural pebble geometry.');
+  }
   return geometry;
 }
 
-export function pebbleMaterial(seed: number) {
-  const palette = ['#3B4142', '#4A4945', '#434A46', '#514B45', '#66635C', '#555D5A', '#726F67', '#394044'];
+export function pebbleMaterial(seed: number, visualVariant: number) {
+  const identity = PEBBLE_IDENTITIES[Math.max(0, Math.min(5, Math.trunc(visualVariant)))] ?? PEBBLE_IDENTITIES[0];
   const random = seededRandom(seed);
   return {
-    color: palette[Math.floor(random() * palette.length)],
-    roughness: 0.72 + random() * 0.16,
-    clearcoat: 0.04 + random() * 0.06,
+    color: identity.color,
+    roughness: identity.roughness + random() * 0.025,
+    clearcoat: identity.clearcoat + random() * 0.012,
   };
 }
 
 export function createBowlGeometry() {
   const points = [
-    new THREE.Vector2(0.02, -0.34), new THREE.Vector2(0.62, -0.25), new THREE.Vector2(1.25, 0.02),
-    new THREE.Vector2(1.7, 0.38), new THREE.Vector2(1.88, 0.66), new THREE.Vector2(1.91, 0.73),
-    new THREE.Vector2(1.82, 0.79), new THREE.Vector2(1.68, 0.7), new THREE.Vector2(1.49, 0.52),
-    new THREE.Vector2(1.16, 0.27), new THREE.Vector2(0.65, 0.04), new THREE.Vector2(0.02, -0.08),
+    new THREE.Vector2(0.02, -0.34), new THREE.Vector2(0.68, -0.27), new THREE.Vector2(1.28, -0.05),
+    new THREE.Vector2(1.68, 0.22), new THREE.Vector2(1.88, 0.47), new THREE.Vector2(1.92, 0.53),
+    new THREE.Vector2(1.83, 0.58), new THREE.Vector2(1.67, 0.48), new THREE.Vector2(1.38, 0.27),
+    new THREE.Vector2(0.84, 0.07), new THREE.Vector2(0.3, -0.03), new THREE.Vector2(0.02, -0.08),
   ];
   const geometry = new THREE.LatheGeometry(points, 72);
-  const positions = geometry.getAttribute('position') as THREE.BufferAttribute;
+  const positions = geometry.getAttribute('position') as import('three').BufferAttribute;
   const point = new THREE.Vector3();
   for (let index = 0; index < positions.count; index += 1) {
     point.fromBufferAttribute(positions, index);
@@ -73,5 +90,23 @@ export function createBowlGeometry() {
     positions.setXYZ(index, point.x, point.y, point.z);
   }
   geometry.computeVertexNormals();
+  const normals = geometry.getAttribute('normal') as import('three').BufferAttribute;
+  const vertexColors = new Float32Array(positions.count * 3);
+  const outside = new THREE.Color('#626B6B');
+  const inside = new THREE.Color('#7A817D');
+  const rim = new THREE.Color('#8B918C');
+  const mixed = new THREE.Color();
+  for (let index = 0; index < positions.count; index += 1) {
+    const y = positions.getY(index);
+    const upward = THREE.MathUtils.clamp(normals.getY(index) * 1.8, 0, 1);
+    mixed.copy(outside).lerp(inside, upward);
+    if (y > 0.48) mixed.lerp(rim, THREE.MathUtils.clamp((y - 0.48) / 0.1, 0, 1));
+    vertexColors[index * 3] = mixed.r;
+    vertexColors[index * 3 + 1] = mixed.g;
+    vertexColors[index * 3 + 2] = mixed.b;
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(vertexColors, 3));
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
   return geometry;
 }

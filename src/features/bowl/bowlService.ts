@@ -1,7 +1,7 @@
 import { requireSupabaseClient } from '../../lib/supabase';
 import type { HeldPebble } from './bowlTypes';
 
-type BowlStateResponse = { pebbles?: { id: string; visual_seed: number; transfer_event_id: string | null; incoming: boolean; touched: boolean }[] };
+type BowlStateResponse = { pebbles?: { id: string; visual_seed: number; visual_variant: number; transfer_event_id: string | null; incoming: boolean; touched: boolean }[] };
 
 export async function getBowlState(pairId: string): Promise<HeldPebble[]> {
   const { data, error } = await requireSupabaseClient().rpc('get_bowl_state', { target_pair_id: pairId });
@@ -10,6 +10,7 @@ export async function getBowlState(pairId: string): Promise<HeldPebble[]> {
   return (response.pebbles ?? []).map((pebble) => ({
     id: pebble.id,
     visualSeed: pebble.visual_seed,
+    visualVariant: pebble.visual_variant,
     transferEventId: pebble.transfer_event_id,
     incoming: pebble.incoming,
     touched: pebble.touched,

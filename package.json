@@ -31,11 +31,11 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2",
-    "three": "^0.185.1"
+    "three": "0.182.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
-    "@types/three": "^0.185.1",
+    "@types/three": "0.182.0",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~57.0.0",
     "typescript": "~6.0.3"
