@@ -6,6 +6,8 @@ Either current member can permanently end an active connection without the other
 
 A person may retain multiple past connections but may belong to at most one active connection. After ending one, they may begin another without deleting old history. Each completed new connection receives its own permanent six-pebble set, initially distributed three and three.
 
+An invitation creates an active but incomplete one-member connection. It remains in Pairing and owns no pebble identities until the second member joins; completion provisions all six atomically. This waiting state is not an empty bowl. A complete connection whose caller holds zero of its six active identities is the legitimate empty-bowl state.
+
 ## Delete an account
 
 Account deletion remains an explicit protected Edge Function flow. The server first ends every active connection belonging to the requester, removes their push tokens, deletes their auth user, and removes empty connection records.

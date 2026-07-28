@@ -14,7 +14,7 @@ test('one provider resolves sign-in session and active connection before routing
   assert.match(provider, /useActiveConnection\(auth\.session\?\.user\.id \?\? null\)/);
   assert.match(root, /appSession\.isLoading/);
   assert.match(root, /AppLoadingScreen/);
-  assert.match(root, /appSession\.connectionId \? '\/\(app\)\/bowl' : '\/\(app\)\/pairing'/);
+  assert.match(root, /appSession\.connectionId && appSession\.connectionComplete \? '\/\(app\)\/bowl' : '\/\(app\)\/pairing'/);
 });
 
 test('route guards share stable state and always render loading or retry surfaces', () => {
@@ -22,8 +22,8 @@ test('route guards share stable state and always render loading or retry surface
     assert.match(source, /useAppSession/);
     assert.match(source, /AppLoadingScreen/);
   }
-  assert.match(bowl, /if\(!state\.connectionId\)return<Redirect href="\/\(app\)\/pairing"/);
-  assert.match(pairing, /if \(appSession\.connectionId\) return <Redirect href="\/\(app\)\/bowl"/);
+  assert.match(bowl, /if\(!state\.connectionId\|\|!state\.connectionComplete\)return<Redirect href="\/\(app\)\/pairing"/);
+  assert.match(pairing, /if \(appSession\.connectionId && appSession\.connectionComplete\) return <Redirect href="\/\(app\)\/bowl"/);
   assert.match(pairing, /appSession\.isLoading/);
-  assert.match(auth, /appSession\.session\) return <Redirect href=\{appSession\.connectionId/);
+  assert.match(auth, /appSession\.session\) return <Redirect href=\{appSession\.connectionId && appSession\.connectionComplete/);
 });

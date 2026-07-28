@@ -12,6 +12,7 @@ type AppSessionValue = {
   session: ReturnType<typeof useAuthSession>['session'];
   connectionErrorText: string | null;
   connectionId: string | null;
+  connectionComplete: boolean;
   connectionRefresh: () => Promise<void>;
 };
 
@@ -28,6 +29,7 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
     session: auth.session,
     connectionErrorText: connection.errorText,
     connectionId: connection.pairId,
+    connectionComplete: connection.isComplete,
     connectionRefresh: connection.refresh,
   };
   return <AppSessionContext.Provider value={value}>{children}</AppSessionContext.Provider>;

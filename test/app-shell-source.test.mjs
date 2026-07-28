@@ -15,6 +15,7 @@ test('app shell separates auth and authenticated routes', () => {
   assert.match(routes, /\(auth\)/);
   assert.match(routes, /\(app\)\/bowl/);
   assert.match(read('app/(app)/settings/index.tsx'), /SettingsScreen/);
+  assert.match(routes, /connectionComplete/);
 });
 
 test('localization persists preference and has English/Hungarian fallback resources', () => {

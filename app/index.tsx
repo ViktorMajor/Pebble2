@@ -16,5 +16,5 @@ export default function IndexRoute() {
   if (appSession.authErrorText) return <AppRetryScreen message={appSession.authErrorText} onRetry={() => void appSession.refresh()} />;
   if (appSession.connectionErrorText) return <AppRetryScreen message={t('app.connectionError')} onRetry={() => void appSession.connectionRefresh()} />;
   if (!appSession.session) return <Redirect href="/(auth)" />;
-  return <Redirect href={appSession.connectionId ? '/(app)/bowl' : '/(app)/pairing'} />;
+  return <Redirect href={appSession.connectionId && appSession.connectionComplete ? '/(app)/bowl' : '/(app)/pairing'} />;
 }
