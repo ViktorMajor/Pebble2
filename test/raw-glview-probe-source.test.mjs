@@ -44,7 +44,7 @@ test('measurements and explicit rerender/remount controls remain distinct', () =
 
 test('development note records all four physical interpretations', () => {
   for (const result of ['Result A', 'Result B', 'Result C', 'Result D']) assert.match(note, new RegExp(result));
-  assert.match(note, /Implemented, not device-verified/);
+  assert.match(note, /Device-verified by user/);
   assert.match(note, /React Three Fiber native Canvas integration/);
   assert.match(note, /Expo GLView\/native-view layout/);
   assert.match(note, /drawing-buffer size disagree/);

@@ -31,4 +31,4 @@ Conclusion: The native GLView is not receiving a valid layout event or the measu
 7. Press **Remount** and confirm both mount and context creation counts increase once.
 8. Select the matching A–D physical observation.
 
-Status remains **Implemented, not device-verified** until the user confirms the result on the physical device.
+Status: **Device-verified by user.** Result A was confirmed on the Redmi Note 14 Pro 5G: the raw GLView and all four quadrants filled the complete physical viewport.
