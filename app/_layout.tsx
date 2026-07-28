@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { I18nProvider } from '../src/i18n';
@@ -15,7 +16,7 @@ export default function RootLayout() {
   }, [fontError, fontsLoaded]);
   if (!fontsLoaded && !fontError) return null;
 
-  return <I18nProvider><AppSessionProvider><Stack
+  return <I18nProvider><AppSessionProvider><StatusBar style="dark" /><Stack
       screenOptions={{
         headerShown: false,
         headerTintColor: colors.textPrimary,
