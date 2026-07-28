@@ -10,7 +10,8 @@ import { getBowlLayout } from './bowlLayouts';
 import type { BowlEnvironment } from './bowlEnvironment';
 import { BowlFallback } from './BowlFallback';
 import { validateNativeSurface } from './nativeSurfaceValidation';
-import { createBowlGeometry, createPebbleGeometry, pebbleMaterial, seededRandom } from './proceduralPebble';
+import { createBowlGeometry, createPebbleGeometry, getPebbleGeometryMetrics, pebbleDetailForQuality, pebbleMaterial, seededRandom, type PebbleGeometryMetrics } from './proceduralPebble';
+import { PAIRING_PREVIEW_LAYOUT, type PreviewPebbleSpec } from './pairingPreview';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 import { THREE } from './threeRuntime';
 
@@ -63,9 +64,15 @@ export type BowlSceneMetrics = {
   glReady: boolean;
   fallbackActive: boolean;
   activeAnimation: string;
+  pebbleDetailLevel: number;
+  pebbleGeometryIndexed: boolean;
+  pebbleVertexCount: number;
+  pebbleTriangleCount: number;
+  pebbleSmoothNormals: boolean;
 };
 type Props = {
   pebbles: HeldPebble[];
+  previewPebbles?: readonly PreviewPebbleSpec[];
   environment: BowlEnvironment;
   disabled?: boolean;
   reducedMotion: boolean;
@@ -158,7 +165,9 @@ type CameraMetrics = Pick<BowlSceneMetrics,
   'r3fHeight' | 'glDrawingBufferWidth' | 'glDrawingBufferHeight' | 'cameraAspectRatio'
   | 'nativeSurfacePixelRatio' | 'rendererPixelRatio' | 'expoGLDrawingBufferWidth' |
   'expoGLDrawingBufferHeight' | 'rendererDrawingBufferWidth' | 'rendererDrawingBufferHeight' |
-  'rendererViewport' | 'rendererScissor' | 'rendererScissorTest' | 'completeNativeSurfaceCovered'
+  'rendererViewport' | 'rendererScissor' | 'rendererScissorTest' | 'completeNativeSurfaceCovered' |
+  'pebbleDetailLevel' | 'pebbleGeometryIndexed' | 'pebbleVertexCount' | 'pebbleTriangleCount' |
+  'pebbleSmoothNormals'
 >;
 
 function quadraticBezier(
@@ -176,6 +185,60 @@ function quadraticBezier(
   );
 }
 
+const CONTACT_SHADOW_VERTEX_SHADER = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }';
+const CONTACT_SHADOW_FRAGMENT_SHADER = 'uniform vec3 shadowColor; varying vec2 vUv; void main(){ float distanceFromCenter=length((vUv-vec2(0.5))*2.0); float alpha=(1.0-smoothstep(0.18,1.0,distanceFromCenter))*0.15; gl_FragColor=vec4(shadowColor,alpha); }';
+
+function PebbleVisual({ visualSeed, visualVariant, incoming = false, diagnostics, layer, materialRef, onPointerDown, onPointerUp, onPointerOut }: {
+  visualSeed: number;
+  visualVariant: number;
+  incoming?: boolean;
+  diagnostics?: BowlDiagnosticOptions;
+  layer: number;
+  materialRef?: RefObject<import('three').MeshPhysicalMaterial | null>;
+  onPointerDown?: (event: ThreeEvent<PointerEvent>) => void;
+  onPointerUp?: (event: ThreeEvent<PointerEvent>) => void;
+  onPointerOut?: (event: ThreeEvent<PointerEvent>) => void;
+}) {
+  const detail = pebbleDetailForQuality(Boolean(diagnostics?.lowQuality));
+  const geometry = useMemo(() => createPebbleGeometry(visualSeed, visualVariant, detail), [detail, visualSeed, visualVariant]);
+  const materialSpec = useMemo(() => pebbleMaterial(visualSeed, visualVariant), [visualSeed, visualVariant]);
+  const mark = useMemo(() => {
+    const random = seededRandom(visualSeed + 91);
+    return { x: (random() - 0.5) * 0.34, z: (random() - 0.5) * 0.2, scale: 0.65 + random() * 0.5, color: visualVariant === 4 ? '#777A75' : '#D0D0C8' };
+  }, [visualSeed, visualVariant]);
+  const shadowUniforms = useMemo(() => ({ shadowColor: { value: new THREE.Color('#747A75') } }), []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  if (diagnostics?.hidePebbles) return null;
+  return <>
+    <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[materialSpec.shadowScale[0], materialSpec.shadowScale[1], 1]} renderOrder={7 + layer} raycast={() => undefined}>
+      <circleGeometry args={[0.47, 36]} />
+      <shaderMaterial uniforms={shadowUniforms} vertexShader={CONTACT_SHADOW_VERTEX_SHADER} fragmentShader={CONTACT_SHADOW_FRAGMENT_SHADER} transparent depthWrite={false} />
+    </mesh>
+    <mesh geometry={geometry} castShadow receiveShadow onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerOut={onPointerOut} raycast={onPointerDown ? undefined : () => undefined} renderOrder={10 + layer}>
+      {diagnostics?.unlit ? (
+        <meshBasicMaterial color="#FFFFFF" wireframe={diagnostics.wireframe} />
+      ) : (
+        <meshPhysicalMaterial ref={materialRef} color={incoming ? '#B7AA9E' : materialSpec.color} emissive={incoming ? '#D3B7A5' : visualVariant === 5 ? '#AFC2B8' : '#000000'} emissiveIntensity={incoming ? 0.07 : visualVariant === 5 ? 0.035 : 0} roughness={materialSpec.roughness} metalness={0} clearcoat={materialSpec.clearcoat} clearcoatRoughness={0.9} flatShading={false} transparent opacity={1} wireframe={diagnostics?.wireframe} />
+      )}
+    </mesh>
+    <mesh position={[mark.x, 0.3, mark.z]} rotation={[-Math.PI / 2, 0, 0]} scale={[mark.scale, 0.48 * mark.scale, 1]} renderOrder={20 + layer} raycast={() => undefined}>
+      <circleGeometry args={[0.052, 16]} />
+      <meshBasicMaterial color={mark.color} transparent opacity={0.24} depthWrite={false} />
+    </mesh>
+  </>;
+}
+
+function PairingPreviewStones({ pebbles, diagnostics, position, scale }: { pebbles: readonly PreviewPebbleSpec[]; diagnostics?: BowlDiagnosticOptions; position: readonly [number, number, number]; scale: number }) {
+  return <group position={position} scale={scale}>{pebbles.slice(0, 3).map((pebble, index) => {
+    const placement = PAIRING_PREVIEW_LAYOUT[index];
+    if (!placement) return null;
+    return <group key={pebble.previewKey} position={placement.position} rotation={placement.rotation} scale={placement.scale} renderOrder={10 + placement.layer}>
+      <PebbleVisual visualSeed={pebble.visualSeed} visualVariant={pebble.visualVariant} diagnostics={diagnostics} layer={placement.layer} />
+    </group>;
+  })}</group>;
+}
+
 function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugCommand, onActivity, onSend, onTouch }: {
   pebble: HeldPebble;
   slot: ReturnType<typeof getBowlLayout>[number];
@@ -187,12 +250,6 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
   onSend: (id: string) => Promise<void>;
   onTouch: (id: string) => Promise<void>;
 }) {
-  const geometry = useMemo(() => createPebbleGeometry(pebble.visualSeed, pebble.visualVariant), [pebble.visualSeed, pebble.visualVariant]);
-  const materialSpec = useMemo(() => pebbleMaterial(pebble.visualSeed, pebble.visualVariant), [pebble.visualSeed, pebble.visualVariant]);
-  const mark = useMemo(() => {
-    const random = seededRandom(pebble.visualSeed + 91);
-    return { x: (random() - 0.5) * 0.34, z: (random() - 0.5) * 0.2, scale: 0.65 + random() * 0.5, color: pebble.visualVariant === 4 ? '#777A75' : '#D0D0C8' };
-  }, [pebble.visualSeed, pebble.visualVariant]);
   const group = useRef<import('three').Group>(null);
   const material = useRef<import('three').MeshPhysicalMaterial>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -219,11 +276,10 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
       setPhase('arriving');
     }
     return () => {
-      geometry.dispose();
       if (timer.current) clearTimeout(timer.current);
       onActivity(pebble.id, 'rest');
     };
-  }, [geometry, onActivity, pebble.id, setPhase, slot.arrivalFrom, slot.rotation]);
+  }, [onActivity, pebble.id, setPhase, slot.arrivalFrom, slot.rotation]);
 
   useEffect(() => {
     if (lastSlot.current !== slot && phase.current === 'rest') setPhase('settling');
@@ -351,21 +407,15 @@ function Stone({ pebble, slot, disabled, reducedMotion, diagnostics, debugComman
 
   if (diagnostics?.hidePebbles) return null;
   return <group ref={group} position={slot.position} rotation={slot.rotation} scale={slot.scale} renderOrder={10 + slot.layer}>
-    <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[0.82, 0.58, 1]} renderOrder={7 + slot.layer}>
-      <circleGeometry args={[0.47, 28]} />
-      <meshBasicMaterial color="#747A75" transparent opacity={0.22} depthWrite={false} />
-    </mesh>
-    <mesh geometry={geometry} castShadow receiveShadow onPointerDown={start} onPointerUp={end} onPointerOut={cancel} renderOrder={10 + slot.layer}>
-      {diagnostics?.unlit ? (
-        <meshBasicMaterial color="#FFFFFF" wireframe={diagnostics.wireframe} />
-      ) : (
-        <meshPhysicalMaterial ref={material} color={pebble.incoming && !pebble.touched ? '#B7AA9E' : materialSpec.color} emissive={pebble.incoming && !pebble.touched ? '#D3B7A5' : pebble.visualVariant === 5 ? '#AFC2B8' : '#000000'} emissiveIntensity={pebble.incoming && !pebble.touched ? 0.07 : pebble.visualVariant === 5 ? 0.035 : 0} roughness={materialSpec.roughness} metalness={0} clearcoat={materialSpec.clearcoat} clearcoatRoughness={0.88} transparent opacity={1} wireframe={diagnostics?.wireframe} />
-      )}
-    </mesh>
-    <mesh position={[mark.x, 0.3, mark.z]} rotation={[-Math.PI / 2, 0, 0]} scale={[mark.scale, 0.48 * mark.scale, 1]} renderOrder={20 + slot.layer}>
-      <circleGeometry args={[0.052, 16]} />
-      <meshBasicMaterial color={mark.color} transparent opacity={0.26} depthWrite={false} />
-    </mesh>
+    <PebbleVisual
+      visualSeed={pebble.visualSeed}
+      visualVariant={pebble.visualVariant}
+      incoming={pebble.incoming && !pebble.touched}
+      diagnostics={diagnostics}
+      layer={slot.layer}
+      materialRef={material}
+      onPointerDown={start} onPointerUp={end} onPointerOut={cancel}
+    />
   </group>;
 }
 
@@ -376,6 +426,12 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
   onMetrics?: (metrics: CameraMetrics) => void;
 }) {
   const { gl, set, size, invalidate } = useThree();
+  const detail = pebbleDetailForQuality(Boolean(diagnostics?.lowQuality));
+  const diagnosticGeometry = useMemo(() => onMetrics ? createPebbleGeometry(193_771, 4, detail) : null, [detail, onMetrics]);
+  const geometryMetrics = useMemo<PebbleGeometryMetrics>(() => diagnosticGeometry
+    ? getPebbleGeometryMetrics(diagnosticGeometry)
+    : { detail, indexed: false, vertexCount: 0, triangleCount: 0, smoothNormals: false }, [detail, diagnosticGeometry]);
+  useEffect(() => () => diagnosticGeometry?.dispose(), [diagnosticGeometry]);
   useEffect(() => {
     const framing = calculateBowlFraming(size.width, size.height);
     const cameraAspectRatio = size.width / Math.max(size.height, 1);
@@ -423,10 +479,15 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
         rendererScissorTest: surface.scissorTest,
         completeNativeSurfaceCovered: surface.completeNativeSurfaceCovered,
         cameraAspectRatio,
+        pebbleDetailLevel: geometryMetrics.detail,
+        pebbleGeometryIndexed: geometryMetrics.indexed,
+        pebbleVertexCount: geometryMetrics.vertexCount,
+        pebbleTriangleCount: geometryMetrics.triangleCount,
+        pebbleSmoothNormals: geometryMetrics.smoothNormals,
       });
     }
     invalidate();
-  }, [activeAnimations, diagnostics, environment.keyIntensity, environment.rimIntensity, gl, invalidate, onMetrics, set, size.height, size.width]);
+  }, [activeAnimations, diagnostics, environment.keyIntensity, environment.rimIntensity, geometryMetrics, gl, invalidate, onMetrics, set, size.height, size.width]);
   if (!diagnostics?.cameraHelper) return null;
   return <>
     <axesHelper args={[2.4]} />
@@ -436,7 +497,7 @@ function CameraRig({ environment, diagnostics, activeAnimations, onMetrics }: {
 
 type WorldProps = Omit<Props, 'forceFallback' | 'onMetrics'> & { onMetrics?: (metrics: CameraMetrics) => void };
 
-function World({ pebbles, environment, disabled = false, reducedMotion, diagnostics, animationCommand, composition = 'bowl', onMetrics, onSend, onTouch }: WorldProps) {
+function World({ pebbles, previewPebbles = [], environment, disabled = false, reducedMotion, diagnostics, animationCommand, composition = 'bowl', onMetrics, onSend, onTouch }: WorldProps) {
   const layout = getBowlLayout(pebbles.length);
   const { invalidate } = useThree();
   const [activeAnimations, setActiveAnimations] = useState<Map<string, MotionPhase>>(() => new Map());
@@ -457,7 +518,7 @@ function World({ pebbles, environment, disabled = false, reducedMotion, diagnost
     <directionalLight position={[-4, 6, 5]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.key} intensity={diagnostics?.fixedWhiteLight ? 1.2 : environment.keyIntensity} castShadow shadow-mapSize-width={diagnostics?.lowQuality ? 256 : 512} shadow-mapSize-height={diagnostics?.lowQuality ? 256 : 512} shadow-bias={-0.0004} />
     <directionalLight position={[4, 3, -4]} color={diagnostics?.fixedWhiteLight ? '#FFFFFF' : environment.rim} intensity={diagnostics?.fixedWhiteLight ? 0.45 : environment.rimIntensity} />
     <pointLight position={[0, 1.5, 2.4]} color="#D2CCC6" intensity={bowlLighting.fill} distance={8} decay={2} />
-    {composition === 'pairing-single' ? <BowlMesh diagnostics={diagnostics} scale={0.84} /> : composition === 'pairing-two' ? <><BowlMesh diagnostics={diagnostics} position={[-0.72, -0.08, 0.25]} scale={0.72} /><SecondaryBowl diagnostics={diagnostics} reducedMotion={reducedMotion} /></> : <BowlMesh diagnostics={diagnostics} />}
+    {composition === 'pairing-single' ? <><BowlMesh diagnostics={diagnostics} scale={0.84} /><PairingPreviewStones pebbles={previewPebbles} diagnostics={diagnostics} position={[0, -0.12, 0]} scale={0.84} /></> : composition === 'pairing-two' ? <><BowlMesh diagnostics={diagnostics} position={[-0.72, -0.08, 0.25]} scale={0.72} /><PairingPreviewStones pebbles={previewPebbles} diagnostics={diagnostics} position={[-0.72, -0.08, 0.25]} scale={0.72} /><SecondaryBowl diagnostics={diagnostics} reducedMotion={reducedMotion} /></> : <BowlMesh diagnostics={diagnostics} />}
     {composition === 'bowl' ? sortedPebbles.map((pebble, index) => <Stone key={pebble.id} pebble={pebble} slot={layout[index]} disabled={disabled || (activeAnimations.size > 0 && !activeAnimations.has(pebble.id))} reducedMotion={reducedMotion} diagnostics={diagnostics} debugCommand={pebble.id === diagnosticTarget ? animationCommand : undefined} onActivity={onActivity} onSend={onSend} onTouch={onTouch} />) : null}
     <CameraRig environment={environment} diagnostics={diagnostics} activeAnimations={activeAnimations} onMetrics={onMetrics} />
   </>;
@@ -513,6 +574,11 @@ export function BowlScene(props: Props) {
       rendererScissorTest: false,
       completeNativeSurfaceCovered: false,
       cameraAspectRatio: 0,
+      pebbleDetailLevel: pebbleDetailForQuality(Boolean(props.diagnostics?.lowQuality)),
+      pebbleGeometryIndexed: false,
+      pebbleVertexCount: 0,
+      pebbleTriangleCount: 0,
+      pebbleSmoothNormals: false,
     };
     onMetrics?.({
       ...measuredCamera,
@@ -530,8 +596,8 @@ export function BowlScene(props: Props) {
       glReady,
       fallbackActive: Boolean(forceFallback || glTimedOut || glFailed),
     });
-  }, [cameraMetrics, canvasLayout, forceFallback, glFailed, glReady, glTimedOut, insets.bottom, insets.left, insets.right, insets.top, onMetrics, props.environment.keyIntensity, props.environment.rimIntensity, viewport, window.height, window.width]);
-  const fallback = <BowlFallback pebbles={props.pebbles} environment={props.environment} composition={props.composition} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} onSend={props.onSend} onTouch={props.onTouch} />;
+  }, [cameraMetrics, canvasLayout, forceFallback, glFailed, glReady, glTimedOut, insets.bottom, insets.left, insets.right, insets.top, onMetrics, props.diagnostics?.lowQuality, props.environment.keyIntensity, props.environment.rimIntensity, viewport, window.height, window.width]);
+  const fallback = <BowlFallback pebbles={props.pebbles} previewPebbles={props.previewPebbles} environment={props.environment} composition={props.composition} disabled={Boolean(props.disabled)} reducedMotion={props.reducedMotion} onSend={props.onSend} onTouch={props.onTouch} />;
   const showFallback = Boolean(props.forceFallback || glTimedOut || glFailed);
   return <View onLayout={onLayout} style={[styles.container, { backgroundColor: props.environment.backgroundEdge }]}>
     {viewport ? <View style={[styles.measuredLayer, { width: viewport.width, height: viewport.height }]}>

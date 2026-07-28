@@ -17,7 +17,7 @@ Pebble is an Expo SDK 57 / React Native application using strict TypeScript, Exp
 - `src/design/`: centralized Luminous Mineral environment/component tokens, shared controls, and the Source Serif 4 / Source Sans 3 font loader.
 - `src/features/navigation/`: the single authenticated Pebble chrome, route-aware header, fallback routing, and restrained navigation motion.
 - `src/i18n/`: persisted English/Hungarian localization.
-- `src/features/pairing/`: client connection queries and secure invitation RPC calls.
+- `src/features/pairing/`: client connection queries, secure invitation RPC calls, and the Pairing hero that supplies visual-only pre-connection specs to the shared Bowl renderer. Preview stones never become owned pebble records or persisted state.
 - `src/features/notifications/`, `sound/`, `widget/`: restrained peripheral feedback.
 - `supabase/migrations/`, `functions/`, `tests/`: forward-only schema, protected server operations, and pgTAP security tests.
 

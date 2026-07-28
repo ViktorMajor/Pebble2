@@ -4,12 +4,18 @@ import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { colors, motion } from '../../design/tokens';
 import { getBowlLayout } from './bowlLayouts';
 import type { BowlEnvironment } from './bowlEnvironment';
+import type { PreviewPebbleSpec } from './pairingPreview';
 import { HOLD_DURATION_MS, type HeldPebble } from './bowlTypes';
 
-type Props = { pebbles: HeldPebble[]; environment: BowlEnvironment; composition?: 'bowl' | 'pairing-single' | 'pairing-two'; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
+type Props = { pebbles: HeldPebble[]; previewPebbles?: readonly PreviewPebbleSpec[]; environment: BowlEnvironment; composition?: 'bowl' | 'pairing-single' | 'pairing-two'; disabled: boolean; reducedMotion: boolean; onSend: (id: string) => Promise<void>; onTouch: (eventId: string) => Promise<void> };
 const FALLBACK_COLORS = ['#C8C2B5', '#8FA097', '#AA9588', '#7F8B89', '#D0CCC1', '#68716F'];
+const PREVIEW_POSITIONS = [
+  { left: '39%', top: '45%', rotate: '-8deg' },
+  { left: '61%', top: '45%', rotate: '7deg' },
+  { left: '50%', top: '32%', rotate: '2deg' },
+] as const;
 
-export function BowlFallback({ pebbles, environment, composition = 'bowl', disabled, reducedMotion, onSend, onTouch }: Props) {
+export function BowlFallback({ pebbles, previewPebbles = [], environment, composition = 'bowl', disabled, reducedMotion, onSend, onTouch }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completed = useRef(false);
   const [travel] = useState(() => new Animated.Value(0));
@@ -72,6 +78,14 @@ export function BowlFallback({ pebbles, environment, composition = 'bowl', disab
           }]} />
         </Animated.View>;
       })}
+      {composition !== 'bowl' ? <View pointerEvents="none" importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>{previewPebbles.slice(0, 3).map((pebble, index) => {
+        const placement = PREVIEW_POSITIONS[index];
+        if (!placement) return null;
+        return <View key={pebble.previewKey} style={[styles.previewPebbleWrap, { left: placement.left, top: placement.top, transform: [{ rotate: placement.rotate }] }]}>
+          <View style={styles.previewContactShadow} />
+          <View style={[styles.previewPebble, { backgroundColor: FALLBACK_COLORS[pebble.visualVariant] ?? FALLBACK_COLORS[0] }]} />
+        </View>;
+      })}</View> : null}
       <View pointerEvents="none" style={styles.frontRim} />
     </View>
     {composition === 'pairing-two' ? <View pointerEvents="none" style={[styles.secondBowl, { width: bowlWidth * 0.56, height: bowlHeight * 0.56 }]}><View style={styles.backRim} /><View style={styles.inside} /><View style={styles.frontRim} /></View> : null}
@@ -90,4 +104,7 @@ const styles = StyleSheet.create({
   pebbleWrap: { position: 'absolute', marginLeft: -30, marginTop: -21, width: 60, height: 46 },
   contactShadow: { position: 'absolute', left: 3, right: 3, bottom: -7, height: 19, borderRadius: 20, backgroundColor: colors.contact, opacity: 0.25 },
   pebble: { width: 60, height: 43, borderRadius: 30, borderWidth: 1, borderColor: '#DDD9CF', shadowColor: colors.contact, shadowOpacity: 0.22, shadowRadius: 8, elevation: 4 },
+  previewPebbleWrap: { position: 'absolute', marginLeft: -22, marginTop: -15, width: 44, height: 32 },
+  previewContactShadow: { position: 'absolute', left: 4, right: 4, bottom: -5, height: 12, borderRadius: 18, backgroundColor: colors.contact, opacity: 0.13 },
+  previewPebble: { width: 44, height: 30, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDD9CF' },
 });

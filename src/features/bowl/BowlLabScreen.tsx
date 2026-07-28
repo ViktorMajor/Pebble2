@@ -142,7 +142,8 @@ export function BowlLabScreen() {
         <Chip label="Hide pebbles" active={hidePebbles} onPress={() => setHidePebbles((value) => !value)} />
         <Chip label="Camera / axes" active={cameraHelper} onPress={() => setCameraHelper((value) => !value)} />
         <Chip label="Safe area" active={safeOverlay} onPress={() => setSafeOverlay((value) => !value)} />
-        <Chip label="Low-end quality" active={lowQuality} onPress={() => setLowQuality((value) => !value)} />
+        <Chip label="Standard smooth" active={!lowQuality} onPress={() => setLowQuality(false)} />
+        <Chip label="Low-quality diagnostic" active={lowQuality} onPress={() => setLowQuality(true)} />
         <Chip label="Reduced motion" active={reduced} onPress={() => setReduced((value) => !value)} />
         <Chip label="GL fallback" active={fallback} onPress={() => setFallback((value) => !value)} />
       </View> : null}
@@ -167,6 +168,10 @@ export function BowlLabScreen() {
         <Metric label="Renderer buffer" value={`${metrics.rendererDrawingBufferWidth.toFixed(0)} × ${metrics.rendererDrawingBufferHeight.toFixed(0)}`} />
         <Metric label="Viewport / scissor" value={`${metrics.rendererViewport} / ${metrics.rendererScissorTest ? metrics.rendererScissor : 'disabled'}`} />
         <Metric label="Native surface" value={metrics.completeNativeSurfaceCovered ? 'complete' : 'mismatch'} />
+        <Metric label="Pebble detail" value={metrics.pebbleDetailLevel} />
+        <Metric label="Geometry topology" value={metrics.pebbleGeometryIndexed ? 'indexed' : 'non-indexed'} />
+        <Metric label="Vertices / triangles" value={`${metrics.pebbleVertexCount} / ${metrics.pebbleTriangleCount}`} />
+        <Metric label="Smooth normals" value={metrics.pebbleSmoothNormals ? 'yes' : 'no'} />
         <Metric label="Renderer" value={metrics.fallbackActive ? 'fallback' : metrics.glReady ? 'GL ready' : 'loading'} />
         <Metric label="Animation" value={metrics.activeAnimation} />
       </View> : null}

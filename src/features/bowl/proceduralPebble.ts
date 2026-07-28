@@ -1,5 +1,16 @@
 import { THREE } from './threeRuntime';
 
+export const STANDARD_PEBBLE_DETAIL = 3;
+export const LOW_QUALITY_PEBBLE_DETAIL = 2;
+
+export type PebbleGeometryMetrics = {
+  detail: number;
+  indexed: boolean;
+  vertexCount: number;
+  triangleCount: number;
+  smoothNormals: boolean;
+};
+
 export function seededRandom(seed: number) {
   let value = seed >>> 0;
   return () => {
@@ -11,19 +22,51 @@ export function seededRandom(seed: number) {
   };
 }
 const PEBBLE_IDENTITIES = [
-  { color: '#C8C2B5', flattening: 0.54, width: 1.12, depth: 1.02, roughness: 0.86, clearcoat: 0.018 },
-  { color: '#8FA097', flattening: 0.66, width: 1.01, depth: 1.02, roughness: 0.83, clearcoat: 0.022 },
-  { color: '#AA9588', flattening: 0.59, width: 1.18, depth: 0.82, roughness: 0.87, clearcoat: 0.016 },
-  { color: '#7F8B89', flattening: 0.62, width: 1.05, depth: 0.98, roughness: 0.85, clearcoat: 0.018 },
-  { color: '#D0CCC1', flattening: 0.58, width: 1.08, depth: 1.04, roughness: 0.84, clearcoat: 0.022 },
-  { color: '#68716F', flattening: 0.6, width: 0.93, depth: 0.91, roughness: 0.82, clearcoat: 0.025 },
+  { color: '#C8C2B5', flattening: 0.56, width: 1.12, depth: 1.02, roughness: 0.85, clearcoat: 0.014 },
+  { color: '#8FA097', flattening: 0.65, width: 1.01, depth: 1.02, roughness: 0.82, clearcoat: 0.018 },
+  { color: '#AA9588', flattening: 0.6, width: 1.16, depth: 0.84, roughness: 0.87, clearcoat: 0.013 },
+  { color: '#7F8B89', flattening: 0.63, width: 1.05, depth: 0.98, roughness: 0.84, clearcoat: 0.015 },
+  { color: '#D0CCC1', flattening: 0.59, width: 1.08, depth: 1.04, roughness: 0.84, clearcoat: 0.018 },
+  { color: '#68716F', flattening: 0.61, width: 0.94, depth: 0.92, roughness: 0.81, clearcoat: 0.02 },
 ] as const;
 
-export function createPebbleGeometry(seed: number, visualVariant: number, detail = 2) {
-  const geometry = new THREE.IcosahedronGeometry(0.54, detail);
+export function pebbleDetailForQuality(lowQuality: boolean) {
+  return lowQuality ? LOW_QUALITY_PEBBLE_DETAIL : STANDARD_PEBBLE_DETAIL;
+}
+
+export function weldPebbleVertices(source: import('three').BufferGeometry, tolerance = 1e-5) {
+  const positions = source.getAttribute('position') as import('three').BufferAttribute;
+  const precision = 1 / tolerance;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const known = new Map<string, number>();
+
+  for (let index = 0; index < positions.count; index += 1) {
+    const x = positions.getX(index);
+    const y = positions.getY(index);
+    const z = positions.getZ(index);
+    const key = `${Math.round(x * precision)},${Math.round(y * precision)},${Math.round(z * precision)}`;
+    let vertexIndex = known.get(key);
+    if (vertexIndex === undefined) {
+      vertexIndex = vertices.length / 3;
+      known.set(key, vertexIndex);
+      vertices.push(x, y, z);
+    }
+    indices.push(vertexIndex);
+  }
+
+  const welded = new THREE.BufferGeometry();
+  welded.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  welded.setIndex(indices);
+  source.dispose();
+  return welded;
+}
+
+export function createPebbleGeometry(seed: number, visualVariant: number, detail = STANDARD_PEBBLE_DETAIL) {
+  const source = new THREE.IcosahedronGeometry(0.54, detail);
   const random = seededRandom(seed);
   const identity = PEBBLE_IDENTITIES[Math.max(0, Math.min(5, Math.trunc(visualVariant)))] ?? PEBBLE_IDENTITIES[0];
-  const positions = geometry.getAttribute('position') as import('three').BufferAttribute;
+  const positions = source.getAttribute('position') as import('three').BufferAttribute;
   const point = new THREE.Vector3();
   const normal = new THREE.Vector3();
   const flattening = identity.flattening * (0.97 + random() * 0.06);
@@ -32,28 +75,34 @@ export function createPebbleGeometry(seed: number, visualVariant: number, detail
   const phases = [random() * 8, random() * 8, random() * 8];
   const dents = Array.from({ length: 3 }, () => ({
     direction: new THREE.Vector3(random() * 2 - 1, random() * 0.7 - 0.2, random() * 2 - 1).normalize(),
-    depth: 0.025 + random() * 0.035,
-    width: 0.36 + random() * 0.3,
+    depth: 0.014 + random() * 0.018,
+    width: 0.5 + random() * 0.28,
   }));
 
   for (let index = 0; index < positions.count; index += 1) {
     point.fromBufferAttribute(positions, index);
     normal.copy(point).normalize();
     const broadNoise = Math.sin(normal.x * 3.1 + phases[0]) * Math.sin(normal.y * 2.7 + phases[1]) * Math.sin(normal.z * 3.7 + phases[2]);
-    const fineNoise = Math.sin((normal.x + normal.z) * 11 + phases[1]) * 0.008;
+    const fineNoise = Math.sin((normal.x + normal.z) * 8 + phases[1]) * 0.003;
     point.multiply(new THREE.Vector3(width, flattening, depth));
-    point.addScaledVector(normal, broadNoise * 0.025 + fineNoise);
+    point.addScaledVector(normal, broadNoise * 0.016 + fineNoise);
     dents.forEach((dent) => {
       const angle = normal.angleTo(dent.direction);
       point.addScaledVector(normal, -dent.depth * Math.exp(-(angle * angle) / (2 * dent.width * dent.width)));
     });
-    if (point.y < -0.28) point.y = THREE.MathUtils.lerp(point.y, -0.28, 0.58);
+    if (point.y < -0.28) point.y = THREE.MathUtils.lerp(point.y, -0.28, 0.42);
     positions.setXYZ(index, point.x, point.y, point.z);
   }
-  geometry.computeVertexNormals();
+  source.deleteAttribute('normal');
+  source.deleteAttribute('uv');
+  const geometry = weldPebbleVertices(source);
   geometry.center();
+  geometry.computeVertexNormals();
+  geometry.normalizeNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
+  geometry.userData.pebbleDetail = detail;
+  geometry.userData.smoothNormals = true;
   const bounds = geometry.boundingBox;
   if (!bounds || !Number.isFinite(bounds.min.x + bounds.min.y + bounds.min.z + bounds.max.x + bounds.max.y + bounds.max.z)) {
     geometry.dispose();
@@ -62,13 +111,26 @@ export function createPebbleGeometry(seed: number, visualVariant: number, detail
   return geometry;
 }
 
+export function getPebbleGeometryMetrics(geometry: import('three').BufferGeometry): PebbleGeometryMetrics {
+  const positions = geometry.getAttribute('position');
+  const indexCount = geometry.index?.count ?? positions.count;
+  return {
+    detail: Number(geometry.userData.pebbleDetail ?? STANDARD_PEBBLE_DETAIL),
+    indexed: geometry.index !== null,
+    vertexCount: positions.count,
+    triangleCount: Math.trunc(indexCount / 3),
+    smoothNormals: Boolean(geometry.userData.smoothNormals && geometry.getAttribute('normal')),
+  };
+}
+
 export function pebbleMaterial(seed: number, visualVariant: number) {
   const identity = PEBBLE_IDENTITIES[Math.max(0, Math.min(5, Math.trunc(visualVariant)))] ?? PEBBLE_IDENTITIES[0];
   const random = seededRandom(seed);
   return {
     color: identity.color,
-    roughness: identity.roughness + random() * 0.025,
-    clearcoat: identity.clearcoat + random() * 0.012,
+    roughness: Math.min(0.88, identity.roughness + random() * 0.012),
+    clearcoat: identity.clearcoat + random() * 0.006,
+    shadowScale: [0.76 * identity.width, 0.55 * identity.depth] as const,
   };
 }
 

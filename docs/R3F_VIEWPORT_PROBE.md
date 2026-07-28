@@ -8,7 +8,7 @@ This development-only probe isolates `@react-three/fiber/native` Canvas sizing, 
 - **R3F native DPR: Device-verified by user.** Default and Reset scissor used approximately 3.250 DPR, filled the complete viewport, and preserved correct pointer mapping.
 - **R3F capped DPR 1.35: Failed physical verification.** Resync logical size and Resync drawing buffer produced an approximately 506 × 1126 renderer buffer inside the approximately 1220 × 2712 native surface and visibly reproduced the small left-aligned rectangle.
 - **Source-informed native-DPR candidate: Device-verified by user.** It restored an approximately 1219 × 2712 renderer buffer and correct top-right pointer selection.
-- **Production BowlScene repair: Implemented, not device-verified.** Physical verification of ordinary Bowl, Pairing, and Bowl Lab remains required.
+- **Production BowlScene repair: Device-verified by user.** Ordinary Bowl, Pairing hero, and Bowl Lab all fill their intended native viewport on the Redmi Note 14 Pro 5G.
 
 ## Installed native Canvas behavior
 
@@ -67,4 +67,4 @@ Visual and event coordinate systems disagree. Do not apply that repair to produc
 
 The production repair removes BowlScene's later DPR overrides, including the low-quality override. Low-quality diagnostics now reduce shadow-map cost without resizing the Three.js surface. Direct DPR reduction is unsafe in the current Expo GL architecture because it does not resize the underlying native drawing surface.
 
-Do not describe the ordinary Bowl, Pairing, or Bowl Lab repair as fixed until those production consumers are **Device-verified by user**.
+The native-surface repair for ordinary Bowl, Pairing, and Bowl Lab is now **Device-verified by user**. Subsequent visual changes, including smooth geometry and Pairing preview stones, retain their own verification status and must be confirmed separately.

@@ -32,6 +32,10 @@ The bowl is a shallow hand-formed mineral/ceramic object with high roughness, ze
 
 Six stable visual roles combine a persisted seed with `visual_variant`: flatter pale mineral-grey, round warm grey, narrow graphite-grey, muted green-grey, softly marked medium-grey, and smaller light slate. Seeded deformation supplies fine individuality; the variant guarantees value and proportion separation. At least three roles are lighter than the bowl interior. The UI never names, ranks, catalogues, values, or assigns rarity to them.
 
+The standard renderer uses detail-3 icosahedral source geometry. Deterministic deformation is deliberately broad and shallow; obsolete normals and UVs are removed, equivalent positions are welded into shared vertices, and smooth normals and finite bounds are recomputed. This preserves recognizable asymmetry without a faceted crystal or low-poly silhouette. Matte roughness remains approximately `0.78–0.88`, clearcoat is restrained, and each soft gradient contact shadow follows its stone's proportions rather than appearing as a detached dark disc. The development-only low-quality mode uses detail 2 and smaller shadow maps; it never reduces the native renderer DPR.
+
+Before a connection is complete, Pairing may show three deterministic presentational stones—limestone, clay-grey, and sage—in the primary bowl. They use the same visual geometry and material component as owned pebbles but are a separate `PreviewPebbleSpec`: they are not ownership records, are never persisted, counted, transferred, touched, announced as controls, or passed to Supabase. Initial and join states show these three stones in one bowl. The invitation-waiting state keeps the same three stones only in the primary bowl while the lower-contrast secondary bowl remains empty.
+
 Layouts zero through six are explicit. The initial three form a loose asymmetric triangle with visible bowl material between them. Every slot supplies position, rotation, scale, vertical offset, draw order, arrival origin, departure control point, and departure endpoint. Reduction from eight to six increases negative space, identity recognition, animation clarity, and deterministic test coverage without a physics engine.
 
 ## Composition and camera
@@ -96,7 +100,7 @@ The responsive 2D fallback uses the same six roles, zero-through-six layouts, ce
 
 The development-only Bowl Lab is opened from Settings → Development; no ADB command is required. A full-width preview uses about 42% of portrait height with a 300-point minimum. A separate scrolling workbench groups pebble count, motion, lighting/season, collapsible renderer diagnostics and metrics, typography/accessibility, and connection inspection. Metrics no longer cover the bowl.
 
-The Lab exposes counts zero through six, all identities, initial three, all six, empty, hold/cancel/departure/arrival/touched states, four times, seasons, maximum darkness, reduced motion, low-end quality, GL fallback, wireframe, unlit material, white light, bowl/pebble visibility, axes/camera diagnostics, Safe Area overlay, English/Hungarian, and large type. It reports real parent/Canvas/window bounds, Safe Area, projected width, side margin, camera distance, exposure, lights, frame activity, Canvas instances, renderer mounts, readiness, fallback, and active animation.
+The Lab exposes counts zero through six, all identities, initial three, all six, empty, hold/cancel/departure/arrival/touched states, four times, seasons, maximum darkness, reduced motion, standard-smooth/detail-3 and low-quality/detail-2 geometry, GL fallback, wireframe, unlit material, white light, bowl/pebble visibility, axes/camera diagnostics, Safe Area overlay, English/Hungarian, and large type. It reports real parent/Canvas/window bounds, Safe Area, projected width, side margin, camera distance, exposure, lights, frame activity, Canvas instances, renderer mounts, geometry topology, vertex and triangle counts, smooth-normal status, readiness, fallback, and active animation.
 
 The optional development data inspector calls a member-only aggregate RPC. It shows pair/model status and active, caller-held, elsewhere-held, and retired counts without partner identity. It cannot write ownership or bypass RLS, and production navigation cannot expose the Lab.
 
@@ -112,7 +116,7 @@ Navigation and functional controls remain flat. Primary actions use muted sage, 
 
 ## Physical-device acceptance
 
-Automated tests and Android export cannot certify visual success. A physical Android pass must confirm the entire bowl contour, horizontal centring, three visible distinct initial stones, restrained light temperature, perceptible pickup/cancel/departure/arrival, complete empty state, readable relational text, stable GL/fallback behavior, one renderer after repeated navigation, and no rapid thermal increase.
+Automated tests and Android export cannot certify visual success. The native-surface viewport repair is **Device-verified by user** on the Redmi Note 14 Pro 5G. Pairing preview stones and smooth detail-3 pebble quality remain **Implemented, not device-verified** until the user confirms them on that phone. A physical Android pass must confirm the entire bowl contour, horizontal centring, three visible distinct preview stones, water-worn rather than faceted silhouettes, readable six-stone separation, restrained light temperature, perceptible pickup/cancel/departure/arrival, complete empty state, readable relational text, stable GL/fallback behavior, one renderer after repeated navigation, and no rapid thermal increase.
 
 Permanent rules:
 

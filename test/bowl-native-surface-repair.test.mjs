@@ -63,7 +63,7 @@ test('low-quality diagnostics reduce shadow cost without reducing renderer DPR',
   assert.match(scene, /shadow-mapSize-width=\{diagnostics\?\.lowQuality \? 256 : 512\}/);
   assert.match(scene, /shadow-mapSize-height=\{diagnostics\?\.lowQuality \? 256 : 512\}/);
   assert.doesNotMatch(scene, /lowQuality[\s\S]{0,100}setPixelRatio|setPixelRatio[\s\S]{0,100}lowQuality/);
-  assert.match(lab, /Low-end quality/);
+  assert.match(lab, /Low-quality diagnostic/);
 });
 
 test('repair introduces no screen-specific width workaround or camera compensation', () => {
